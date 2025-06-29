@@ -11,3 +11,4 @@
 
 # Prisma
 /generated/prisma
+.vercel
