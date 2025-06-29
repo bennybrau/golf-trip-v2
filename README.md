@@ -55,7 +55,7 @@ brew services start postgresql@15
 createdb golf_trip_dev
 
 # Set up database schema
-npx prisma migrate dev
+npm run db:migrate
 
 # Generate Prisma client
 npx prisma generate
@@ -126,8 +126,9 @@ The app uses two main models:
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run typecheck` - Run TypeScript type checking
-- `npx prisma studio` - Open Prisma database browser
-- `npx prisma db push` - Apply schema changes to database
+- `npm run db:studio` - Open Prisma database browser
+- `npm run db:push` - Apply schema changes to database
+- `npm run db:migrate` - Create and apply new migrations
 
 ## 🚀 Deployment
 
@@ -139,11 +140,10 @@ npm run build
 
 ### Environment Variables
 
-Set up your environment variables for production:
+Make sure your environment variables are configured:
 
 ```env
-DATABASE_URL="postgresql://user:password@host:5432/database?sslmode=require"
-NODE_ENV="production"
+DATABASE_URL="postgresql://username@localhost:5432/golf_trip_dev"
 ```
 
 ### Deploy Options
