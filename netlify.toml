@@ -1,6 +1,10 @@
 [build]
   command = "npm run build"
   publish = "build/client"
+  environment = { NODE_ENV = "production" }
+
+[build.environment]
+  NODE_ENV = "production"
 
 [dev]
   command = "npm run dev"
