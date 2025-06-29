@@ -8,7 +8,7 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "postbuild": "cp -r build/server/* netlify/functions/"
+    "postbuild": "[ -d netlify/functions ] || mkdir -p netlify/functions && cp -r build/server/* netlify/functions/"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",

@@ -1,5 +1,6 @@
 import { redirect } from 'react-router';
-import { deleteSession, clearSessionCookie, getSessionToken } from '../lib/session';
+import { deleteSession } from '../lib/auth';
+import { clearSessionCookie, getSessionToken } from '../lib/session';
 import type { Route } from './+types/logout';
 
 export async function action({ request }: Route.ActionArgs) {
