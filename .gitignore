@@ -5,10 +5,11 @@
 /.react-router/
 /build/
 
-# Environment variables (except example)
+# Environment variables (except example files)
 .env
 .env.local
 .env.production
+.env.development
 
 # Prisma
 /generated/prisma
