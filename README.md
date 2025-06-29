@@ -151,7 +151,6 @@ NODE_ENV="production"
 The app can be deployed to any Node.js hosting platform:
 
 - **Vercel** (recommended for React Router apps)
-- **Netlify**
 - **Railway**
 - **Render**
 - **DigitalOcean App Platform**
