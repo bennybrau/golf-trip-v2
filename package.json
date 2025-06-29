@@ -12,6 +12,7 @@
     "postbuild": "echo 'Build complete'"
   },
   "dependencies": {
+    "@netlify/vite-plugin-react-router": "^1.0.1",
     "@prisma/client": "^6.10.1",
     "@react-router/node": "^7.5.3",
     "@react-router/serve": "^7.5.3",
