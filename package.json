@@ -4,9 +4,11 @@
   "type": "module",
   "scripts": {
     "build": "react-router build",
+    "build:netlify": "node build-netlify.js",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "postbuild": "cp -r build/server/* netlify/functions/"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",

@@ -1,17 +1,11 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
+// Production schema for PostgreSQL (Supabase)
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
-  // For Turso deployment, use:
-  // provider = "turso"
-  // url      = env("TURSO_DATABASE_URL")
-  // authToken = env("TURSO_AUTH_TOKEN")
 }
 
 model User {
