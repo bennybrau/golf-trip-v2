@@ -8,7 +8,7 @@ A modern golf management application built with React Router v7, featuring user 
 - **👤 User Management**: Account settings and profile management
 - **🎨 Modern UI**: Responsive design with Tailwind CSS and custom components
 - **📱 Mobile-First**: Optimized for mobile and desktop experiences
-- **🗄️ Database**: SQLite database with Prisma ORM
+- **🗄️ Database**: PostgreSQL database with Prisma ORM
 - **🔒 TypeScript**: Full type safety throughout the application
 - **⚡ Hot Reload**: Fast development with Vite and React Router dev server
 
@@ -16,7 +16,7 @@ A modern golf management application built with React Router v7, featuring user 
 
 - **Frontend**: React 19, React Router v7, TypeScript
 - **Styling**: Tailwind CSS v4
-- **Database**: SQLite with Prisma ORM
+- **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: bcryptjs for password hashing
 - **Validation**: Zod for schema validation
 - **Build Tool**: Vite
@@ -44,14 +44,21 @@ npm install
 
 ### 3. Set up the database
 
-The project uses SQLite with Prisma. The database configuration is already set up in `.env`:
+The project uses PostgreSQL with Prisma. Set up your local database:
 
 ```bash
+# Install PostgreSQL (macOS with Homebrew)
+brew install postgresql@15
+brew services start postgresql@15
+
+# Create development database
+createdb golf_trip_dev
+
+# Set up database schema
+npx prisma migrate dev
+
 # Generate Prisma client
 npx prisma generate
-
-# Apply database schema
-npx prisma db push
 ```
 
 ### 4. Start the development server
@@ -132,10 +139,10 @@ npm run build
 
 ### Environment Variables
 
-Make sure to set up your environment variables for production:
+Set up your environment variables for production:
 
 ```env
-DATABASE_URL="file:./prisma/prod.db"
+DATABASE_URL="postgresql://user:password@host:5432/database?sslmode=require"
 NODE_ENV="production"
 ```
 

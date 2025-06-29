@@ -6,12 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
-  // For Turso deployment, use:
-  // provider = "turso"
-  // url      = env("TURSO_DATABASE_URL")
-  // authToken = env("TURSO_AUTH_TOKEN")
 }
 
 model User {
