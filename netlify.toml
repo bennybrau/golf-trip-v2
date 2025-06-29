@@ -3,14 +3,8 @@
   publish = "build/client"
 
 [functions]
-  directory = "build/server"
+  directory = "netlify/functions"
   node_bundler = "esbuild"
-
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/index"
-  status = 200
-  conditions = {Role = ["admin"]}
 
 [[redirects]]
   from = "/build/*"
