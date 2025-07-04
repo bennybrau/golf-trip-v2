@@ -21,6 +21,7 @@
     "@types/bcryptjs": "^2.4.6",
     "bcryptjs": "^3.0.2",
     "isbot": "^5.1.27",
+    "lucide-react": "^0.525.0",
     "prisma": "^6.10.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
