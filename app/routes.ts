@@ -5,4 +5,5 @@ export default [
   route("login", "routes/login.tsx"),
   route("account", "routes/account.tsx"),
   route("logout", "routes/logout.tsx"),
+  route("golfers", "routes/golfers.tsx"),
 ] satisfies RouteConfig;
