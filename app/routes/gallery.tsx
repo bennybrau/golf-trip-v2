@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
@@ -59,12 +59,15 @@ export async function action({ request }: Route.ActionArgs) {
   if (action === 'add-photo') {
     const file = formData.get('file') as File;
     const caption = formData.get('caption') as string || undefined;
-    let category = formData.get('category') as string || undefined;
+    let category = formData.get('category') as string;
     
     // If category is "custom", use the custom category input
     if (category === 'custom') {
-      category = formData.get('customCategory') as string || undefined;
+      category = formData.get('customCategory') as string || '';
     }
+    
+    // Convert empty string to null to properly handle no category
+    const categoryValue = category && category.trim() !== '' ? category : null;
 
     try {
       // Validate file
@@ -91,7 +94,7 @@ export async function action({ request }: Route.ActionArgs) {
           cloudflareId,
           url,
           caption,
-          category,
+          category: categoryValue,
           createdBy: user.id,
         },
       });
@@ -103,6 +106,45 @@ export async function action({ request }: Route.ActionArgs) {
         return { error: error.errors[0].message };
       }
       return { error: "Failed to upload photo" };
+    }
+  }
+
+  if (action === 'edit-photo') {
+    const photoId = formData.get('photoId') as string;
+    const caption = formData.get('caption') as string || undefined;
+    let category = formData.get('category') as string;
+    
+    // If category is "custom", use the custom category input
+    if (category === 'custom') {
+      category = formData.get('customCategory') as string || '';
+    }
+    
+    // Convert empty string to null to properly unset category
+    const categoryValue = category && category.trim() !== '' ? category : null;
+    
+    try {
+      // Check if photo exists
+      const existingPhoto = await prisma.photo.findUnique({
+        where: { id: photoId },
+      });
+
+      if (!existingPhoto) {
+        return { error: "Photo not found" };
+      }
+
+      // Update photo in database
+      await prisma.photo.update({
+        where: { id: photoId },
+        data: {
+          caption,
+          category: categoryValue,
+        },
+      });
+      
+      return { success: true, message: 'Photo updated successfully' };
+    } catch (error) {
+      console.error('Photo edit error:', error);
+      return { error: "Failed to update photo" };
     }
   }
 
@@ -150,12 +192,14 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const [editingPhoto, setEditingPhoto] = useState<any>(null);
+  const [showEditCustomCategory, setShowEditCustomCategory] = useState(false);
 
   const filteredPhotos = selectedCategory === 'ALL' 
     ? photos 
     : photos.filter(photo => photo.category === selectedCategory);
 
-  const handleUploadSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleUploadSubmit = () => {
     setIsUploading(true);
     // Form will submit normally, loading state will be reset when page reloads
   };
@@ -169,6 +213,16 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
       event.preventDefault();
     }
   };
+
+  // Reset forms when action succeeds
+  useEffect(() => {
+    if (actionData?.success) {
+      setEditingPhoto(null);
+      setShowEditCustomCategory(false);
+      setIsFormOpen(false);
+      setShowCustomCategory(false);
+    }
+  }, [actionData]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -333,6 +387,108 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
           </Card>
         )}
 
+        {/* Edit Photo Form (Admin Only) */}
+        {user.isAdmin && editingPhoto && (
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Edit Photo
+              </h2>
+              
+              <form method="post" className="space-y-4">
+                <input type="hidden" name="_action" value="edit-photo" />
+                <input type="hidden" name="photoId" value={editingPhoto.id} />
+                
+                {/* Photo Preview */}
+                <div className="mb-4">
+                  <img
+                    src={editingPhoto.url}
+                    alt={editingPhoto.caption || 'Photo preview'}
+                    className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="editCaption" className="block text-sm font-medium text-gray-700 mb-1">
+                    Caption
+                  </label>
+                  <Input 
+                    id="editCaption"
+                    name="caption" 
+                    type="text" 
+                    defaultValue={editingPhoto.caption || ''}
+                    placeholder="Photo description"
+                    className="w-full"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="editCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <select 
+                    id="editCategory"
+                    name="category" 
+                    defaultValue={editingPhoto.category || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onChange={(e) => setShowEditCustomCategory(e.target.value === 'custom')}
+                  >
+                    <option value="">No category</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category || ''}>{category}</option>
+                    ))}
+                    <option value="custom">+ Add new category</option>
+                  </select>
+                </div>
+
+                {showEditCustomCategory && (
+                  <div>
+                    <label htmlFor="editCustomCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                      New Category Name
+                    </label>
+                    <Input 
+                      id="editCustomCategory"
+                      name="customCategory" 
+                      type="text" 
+                      placeholder="Enter new category name"
+                      className="w-full"
+                      required
+                    />
+                  </div>
+                )}
+
+                {actionData?.error && (
+                  <div className="text-red-600 text-sm">
+                    {actionData.error}
+                  </div>
+                )}
+
+                {actionData?.success && (
+                  <div className="text-green-600 text-sm">
+                    {actionData.message}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button type="submit">
+                    Update Photo
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="secondary"
+                    onClick={() => {
+                      setEditingPhoto(null);
+                      setShowEditCustomCategory(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Photo Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredPhotos.length === 0 ? (
@@ -370,26 +526,44 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
                     />
                   </div>
                   
-                  {/* Delete button (Admin only) */}
+                  {/* Admin buttons (Edit & Delete) */}
                   {user.isAdmin && (
-                    <form method="post" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <input type="hidden" name="_action" value="delete-photo" />
-                      <input type="hidden" name="photoId" value={photo.id} />
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      {/* Edit button */}
                       <Button
-                        type="submit"
-                        variant="danger"
+                        type="button"
+                        variant="primary"
                         size="sm"
-                        className="bg-red-500 hover:bg-red-600 text-white"
-                        disabled={deletingPhotoId === photo.id}
-                        onClick={(e) => handleDeleteClick(photo.id, e)}
+                        className="bg-green-500 hover:bg-green-600 text-white border border-white shadow-md"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPhoto(photo);
+                          setShowEditCustomCategory(false);
+                        }}
                       >
-                        {deletingPhotoId === photo.id ? (
-                          <Spinner size="sm" className="border-white border-t-red-200" />
-                        ) : (
-                          '×'
-                        )}
+                        ✎
                       </Button>
-                    </form>
+                      
+                      {/* Delete button */}
+                      <form method="post" className="inline">
+                        <input type="hidden" name="_action" value="delete-photo" />
+                        <input type="hidden" name="photoId" value={photo.id} />
+                        <Button
+                          type="submit"
+                          variant="danger"
+                          size="sm"
+                          className="bg-red-500 hover:bg-red-600 text-white border border-white shadow-md"
+                          disabled={deletingPhotoId === photo.id}
+                          onClick={(e) => handleDeleteClick(photo.id, e)}
+                        >
+                          {deletingPhotoId === photo.id ? (
+                            <Spinner size="sm" className="border-white border-t-red-200" />
+                          ) : (
+                            '×'
+                          )}
+                        </Button>
+                      </form>
+                    </div>
                   )}
                   
                   {(photo.caption || photo.category) && (

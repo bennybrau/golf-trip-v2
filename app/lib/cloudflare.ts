@@ -17,6 +17,22 @@ interface CloudflareImageDeleteResponse {
   messages: any[];
 }
 
+interface CloudflareImageListResponse {
+  result: {
+    images: Array<{
+      id: string;
+      filename: string;
+      uploaded: string;
+      requireSignedURLs: boolean;
+      variants: string[];
+      meta?: Record<string, any>;
+    }>;
+  };
+  success: boolean;
+  errors: any[];
+  messages: any[];
+}
+
 export class CloudflareImages {
   private accountId: string;
   private apiToken: string;
@@ -77,6 +93,32 @@ export class CloudflareImages {
     if (!result.success) {
       throw new Error(`Cloudflare delete failed: ${result.errors.map(e => e.message).join(', ')}`);
     }
+  }
+
+  async listImages(): Promise<Array<{id: string; filename: string; uploaded: string; url: string}>> {
+    const response = await fetch(`${this.baseUrl}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to list images: ${response.statusText}`);
+    }
+
+    const result: CloudflareImageListResponse = await response.json();
+    
+    if (!result.success) {
+      throw new Error(`Cloudflare list failed: ${result.errors.map(e => e.message).join(', ')}`);
+    }
+
+    return result.result.images.map(image => ({
+      id: image.id,
+      filename: image.filename,
+      uploaded: image.uploaded,
+      url: `${process.env.CLOUDFLARE_IMG_URL_PREFIX}${image.id}/public`
+    }));
   }
 
   getImageUrl(imageId: string, variant: string = 'public'): string {

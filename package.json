@@ -12,7 +12,9 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "import:images": "tsx scripts/import-cloudflare-images.ts",
+    "import:images:js": "node scripts/import-cloudflare-images.js"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",
@@ -36,6 +38,7 @@
     "@types/react-dom": "^19.1.2",
     "@vercel/node": "^5.3.0",
     "tailwindcss": "^4.1.4",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.3",
     "vite-tsconfig-paths": "^5.1.4"
