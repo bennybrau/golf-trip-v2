@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, Form } from 'react-router';
 import { Avatar, Logo } from './ui';
 import type { User } from '../lib/auth';
@@ -7,10 +8,12 @@ interface NavigationProps {
 }
 
 export function Navigation({ user }: NavigationProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
+          {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <Logo size="sm" />
@@ -18,7 +21,8 @@ export function Navigation({ user }: NavigationProps) {
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-4">
             <Link
               to="/"
               className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
@@ -76,7 +80,104 @@ export function Navigation({ user }: NavigationProps) {
               </div>
             </div>
           </div>
+
+          {/* Mobile menu button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-700 hover:text-green-600 p-2 rounded-md transition-colors"
+              aria-label="Toggle mobile menu"
+            >
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                {isMobileMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 pt-4 pb-4">
+            <div className="space-y-1">
+              <Link
+                to="/"
+                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+              
+              <Link
+                to="/golfers"
+                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Golfers
+              </Link>
+              
+              <Link
+                to="/foursomes"
+                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Foursomes
+              </Link>
+              
+              <Link
+                to="/gallery"
+                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Gallery
+              </Link>
+              
+              {/* Mobile User Menu */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex items-center px-3 py-2 mb-2">
+                  <Avatar src={user.avatar} alt={user.name} name={user.name} size="sm" />
+                  <span className="ml-3 text-gray-900 font-medium">{user.name}</span>
+                </div>
+                
+                <Link
+                  to="/account"
+                  className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Account Settings
+                </Link>
+                
+                <Form method="post" action="/logout">
+                  <button
+                    type="submit"
+                    className="block w-full text-left px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Out
+                  </button>
+                </Form>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );
