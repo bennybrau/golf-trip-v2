@@ -4,3 +4,4 @@ export { Card, CardHeader, CardContent } from './Card';
 export { Alert } from './Alert';
 export { Avatar } from './Avatar';
 export { Logo } from './Logo';
+export { Spinner } from './Spinner';

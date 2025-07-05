@@ -10,7 +10,7 @@ export interface User {
   isAdmin: boolean;
 }
 
-export async function createUser(email: string, password: string, name: string) {
+export async function createUser(email: string, password: string, name: string, isAdmin: boolean = false) {
   const hashedPassword = await bcrypt.hash(password, 10);
   
   return prisma.user.create({
@@ -18,6 +18,7 @@ export async function createUser(email: string, password: string, name: string) 
       email,
       password: hashedPassword,
       name,
+      isAdmin,
     },
   });
 }

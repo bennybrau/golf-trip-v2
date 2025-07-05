@@ -21,6 +21,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sessions  Session[]
+  photos    Photo[]
 }
 
 model Session {
@@ -73,4 +74,16 @@ enum Round {
 enum Course {
   BLACK
   SILVER
+}
+
+model Photo {
+  id          String   @id @default(cuid())
+  cloudflareId String  @unique // Cloudflare Images ID
+  url         String   // Public URL from Cloudflare Images
+  caption     String?
+  category    String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 }
