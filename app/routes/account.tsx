@@ -8,14 +8,63 @@ import type { Route } from './+types/account';
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireAuth(request);
-  return { user };
+  const { prisma } = await import('../lib/db');
+  
+  // Get all users if current user is admin
+  const allUsers = user.isAdmin ? await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      isAdmin: true,
+    },
+    orderBy: { name: 'asc' }
+  }) : [];
+  
+  return { user, allUsers };
 }
 
 export async function action({ request }: Route.ActionArgs) {
   const user = await requireAuth(request);
   const formData = await request.formData();
-  const data = Object.fromEntries(formData);
+  const actionType = formData.get('_action') as string;
+  
+  if (actionType === 'toggle-admin') {
+    // Only admins can modify admin status
+    if (!user.isAdmin) {
+      throw new Response("Unauthorized", { status: 403 });
+    }
+    
+    const targetUserId = formData.get('userId') as string;
+    const isAdmin = formData.get('isAdmin') === 'true';
+    
+    // Prevent user from removing their own admin status if they're the only admin
+    if (targetUserId === user.id && !isAdmin) {
+      const { prisma } = await import('../lib/db');
+      const adminCount = await prisma.user.count({ where: { isAdmin: true } });
+      if (adminCount === 1) {
+        return {
+          error: 'Cannot remove admin status from the last admin user',
+        };
+      }
+    }
+    
+    try {
+      const { prisma } = await import('../lib/db');
+      await prisma.user.update({
+        where: { id: targetUserId },
+        data: { isAdmin },
+      });
+      return { success: true, message: `User admin status ${isAdmin ? 'granted' : 'revoked'} successfully` };
+    } catch (error) {
+      console.error('Admin toggle error:', error);
+      return {
+        error: 'Failed to update admin status',
+      };
+    }
+  }
 
+  const data = Object.fromEntries(formData);
   const result = updateProfileSchema.safeParse(data);
 
   if (!result.success) {
@@ -38,7 +87,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Account() {
-  const { user } = useLoaderData<typeof loader>();
+  const { user, allUsers } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
 
   const displayUser = actionData?.user || user;
@@ -57,7 +106,13 @@ export default function Account() {
           <CardContent className="space-y-6">
             {actionData?.success && (
               <Alert variant="success">
-                Profile updated successfully!
+                {actionData.message || 'Profile updated successfully!'}
+              </Alert>
+            )}
+
+            {actionData?.error && (
+              <Alert variant="error">
+                {actionData.error}
               </Alert>
             )}
 
@@ -109,12 +164,6 @@ export default function Account() {
                 </div>
               </div>
 
-              {actionData?.error && (
-                <Alert variant="error">
-                  {actionData.error}
-                </Alert>
-              )}
-
               <div className="flex justify-end">
                 <Button type="submit">
                   Save Changes
@@ -123,6 +172,42 @@ export default function Account() {
             </Form>
           </CardContent>
         </Card>
+
+        {user.isAdmin && (
+          <Card className="mt-8 shadow-xl">
+            <CardHeader>
+              <h2 className="text-lg font-semibold text-gray-900">User Administration</h2>
+              <p className="mt-2 text-gray-600">Manage admin privileges for all users</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {allUsers.map((u) => (
+                  <div key={u.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{u.name}</h3>
+                      <p className="text-sm text-gray-600">{u.email}</p>
+                      {u.id === user.id && (
+                        <span className="text-xs text-blue-600 font-medium">(You)</span>
+                      )}
+                    </div>
+                    <Form method="post" className="inline">
+                      <input type="hidden" name="_action" value="toggle-admin" />
+                      <input type="hidden" name="userId" value={u.id} />
+                      <input type="hidden" name="isAdmin" value={(!u.isAdmin).toString()} />
+                      <Button
+                        type="submit"
+                        variant={u.isAdmin ? "danger" : "primary"}
+                        size="sm"
+                      >
+                        {u.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                      </Button>
+                    </Form>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mt-8 shadow-xl">
           <CardHeader>
