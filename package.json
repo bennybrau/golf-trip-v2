@@ -13,8 +13,7 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:deploy": "prisma migrate deploy",
-    "import:images": "tsx scripts/import-cloudflare-images.ts",
-    "import:images:js": "node scripts/import-cloudflare-images.js"
+    "import:images": "tsx scripts/import-cloudflare-images.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",

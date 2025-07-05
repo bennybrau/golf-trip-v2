@@ -5,3 +5,4 @@ export { Alert } from './Alert';
 export { Avatar } from './Avatar';
 export { Logo } from './Logo';
 export { Spinner } from './Spinner';
+export { Pagination } from './Pagination';

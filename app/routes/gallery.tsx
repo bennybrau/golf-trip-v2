@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import { Card, CardContent, Button, Input, Spinner, Pagination } from '../components/ui';
 import { prisma } from '../lib/db';
 import { cloudflareImages } from '../lib/cloudflare';
 import { z } from 'zod';
@@ -23,9 +24,24 @@ const PhotoSchema = z.object({
 export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
+    const url = new URL(request.url);
     
-    // Fetch photos from database
+    // Get pagination parameters
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const category = url.searchParams.get('category') || '';
+    const pageSize = 20;
+    const skip = (page - 1) * pageSize;
+    
+    // Build where clause for filtering
+    const whereClause = category && category !== 'ALL' ? { category } : {};
+    
+    // Get total count for pagination
+    const totalPhotos = await prisma.photo.count({ where: whereClause });
+    const totalPages = Math.ceil(totalPhotos / pageSize);
+    
+    // Fetch paginated photos
     const photos = await prisma.photo.findMany({
+      where: whereClause,
       include: {
         user: {
           select: {
@@ -35,12 +51,30 @@ export async function loader({ request }: Route.LoaderArgs) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize,
     });
     
-    // Get unique categories for filtering
-    const categories = [...new Set(photos.map(photo => photo.category).filter(Boolean))];
+    // Get all unique categories for filtering (not paginated)
+    const allPhotos = await prisma.photo.findMany({
+      select: { category: true },
+    });
+    const categories = [...new Set(allPhotos.map(photo => photo.category).filter(Boolean))];
     
-    return { user, photos, categories };
+    return { 
+      user, 
+      photos, 
+      categories,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalPhotos,
+        pageSize,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+      currentCategory: category || 'ALL'
+    };
   } catch (response) {
     throw response;
   }
@@ -185,9 +219,8 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Gallery({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, photos, categories } = loaderData;
+  const { user, photos, categories, pagination, currentCategory } = loaderData;
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -195,9 +228,8 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
   const [editingPhoto, setEditingPhoto] = useState<any>(null);
   const [showEditCustomCategory, setShowEditCustomCategory] = useState(false);
 
-  const filteredPhotos = selectedCategory === 'ALL' 
-    ? photos 
-    : photos.filter(photo => photo.category === selectedCategory);
+  // Photos are already filtered and paginated on the server
+  const filteredPhotos = photos;
 
   const handleUploadSubmit = () => {
     setIsUploading(true);
@@ -222,28 +254,29 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
       <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Photo Gallery
+            Photos
           </h1>
           
           <div className="flex flex-wrap gap-4 items-center justify-between">
             {/* Category Filter */}
             <div className="flex gap-2 flex-wrap">
-              <Button
-                variant={selectedCategory === 'ALL' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setSelectedCategory('ALL')}
-              >
-                All Photos
-              </Button>
-              {categories.map((category) => (
+              <Link to="/gallery">
                 <Button
-                  key={category}
-                  variant={selectedCategory === category ? 'primary' : 'secondary'}
+                  variant={currentCategory === 'ALL' ? 'primary' : 'secondary'}
                   size="sm"
-                  onClick={() => setSelectedCategory(category || '')}
                 >
-                  {category}
+                  All Photos
                 </Button>
+              </Link>
+              {categories.map((category) => (
+                <Link key={category} to={`/gallery?category=${encodeURIComponent(category || '')}`}>
+                  <Button
+                    variant={currentCategory === category ? 'primary' : 'secondary'}
+                    size="sm"
+                  >
+                    {category}
+                  </Button>
+                </Link>
               ))}
             </div>
             
@@ -487,9 +520,9 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
               <Card>
                 <CardContent className="p-8 text-center">
                   <p className="text-gray-500">
-                    {selectedCategory === 'ALL' 
+                    {currentCategory === 'ALL' 
                       ? 'No photos found. Add your first photo to get started!' 
-                      : `No photos found in the "${selectedCategory}" category.`
+                      : `No photos found in the "${currentCategory}" category.`
                     }
                   </p>
                 </CardContent>
@@ -591,6 +624,17 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalPhotos}
+          itemsPerPage={pagination.pageSize}
+          basePath="/gallery"
+          searchParams={new URLSearchParams(currentCategory !== 'ALL' ? { category: currentCategory } : {})}
+          className="mt-8"
+        />
 
         {/* Photo Modal */}
         {selectedPhoto && (
