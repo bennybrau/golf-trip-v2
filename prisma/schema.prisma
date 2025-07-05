@@ -38,4 +38,31 @@ model Golfer {
   phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  foursomesAsPlayer1 Foursome[] @relation("Player1")
+  foursomesAsPlayer2 Foursome[] @relation("Player2")
+  foursomesAsPlayer3 Foursome[] @relation("Player3")
+  foursomesAsPlayer4 Foursome[] @relation("Player4")
+}
+
+model Foursome {
+  id        String   @id @default(cuid())
+  round     Round
+  score     Int?     // strokes above/below par, can be negative
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  golfer1Id String?
+  golfer2Id String?
+  golfer3Id String?
+  golfer4Id String?
+  golfer1   Golfer?  @relation("Player1", fields: [golfer1Id], references: [id])
+  golfer2   Golfer?  @relation("Player2", fields: [golfer2Id], references: [id])
+  golfer3   Golfer?  @relation("Player3", fields: [golfer3Id], references: [id])
+  golfer4   Golfer?  @relation("Player4", fields: [golfer4Id], references: [id])
+}
+
+enum Round {
+  FRIDAY_MORNING
+  FRIDAY_AFTERNOON
+  SATURDAY_MORNING
+  SATURDAY_AFTERNOON
 }

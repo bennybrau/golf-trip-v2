@@ -33,6 +33,13 @@ export function Navigation({ user }: NavigationProps) {
               Golfers
             </Link>
             
+            <Link
+              to="/foursomes"
+              className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Foursomes
+            </Link>
+            
             <div className="relative group">
               <button className="flex items-center space-x-2 text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 <Avatar src={user.avatar} alt={user.name} name={user.name} size="sm" />
