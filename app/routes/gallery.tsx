@@ -204,15 +204,6 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
     // Form will submit normally, loading state will be reset when page reloads
   };
 
-  const handleDeleteClick = (photoId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (confirm('Are you sure you want to delete this photo?')) {
-      setDeletingPhotoId(photoId);
-      // Form will submit normally, loading state will be reset when page reloads
-    } else {
-      event.preventDefault();
-    }
-  };
 
   // Reset forms when action succeeds
   useEffect(() => {
@@ -545,7 +536,19 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
                       </Button>
                       
                       {/* Delete button */}
-                      <form method="post" className="inline">
+                      <form 
+                        method="post" 
+                        className="inline"
+                        onSubmit={(e) => {
+                          e.stopPropagation();
+                          if (!confirm('Are you sure you want to delete this photo?')) {
+                            e.preventDefault();
+                            return false;
+                          }
+                          setDeletingPhotoId(photo.id);
+                          return true;
+                        }}
+                      >
                         <input type="hidden" name="_action" value="delete-photo" />
                         <input type="hidden" name="photoId" value={photo.id} />
                         <Button
@@ -554,7 +557,7 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
                           size="sm"
                           className="bg-red-500 hover:bg-red-600 text-white border border-white shadow-md"
                           disabled={deletingPhotoId === photo.id}
-                          onClick={(e) => handleDeleteClick(photo.id, e)}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {deletingPhotoId === photo.id ? (
                             <Spinner size="sm" className="border-white border-t-red-200" />
