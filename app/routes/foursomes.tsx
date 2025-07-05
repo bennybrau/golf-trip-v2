@@ -15,6 +15,8 @@ export function meta({}: Route.MetaArgs) {
 
 const FoursomeSchema = z.object({
   round: z.enum(['FRIDAY_MORNING', 'FRIDAY_AFTERNOON', 'SATURDAY_MORNING', 'SATURDAY_AFTERNOON']),
+  course: z.enum(['BLACK', 'SILVER']),
+  teeTime: z.string().min(1, "Tee time is required"),
   golfer1Id: z.string().optional(),
   golfer2Id: z.string().optional(),
   golfer3Id: z.string().optional(),
@@ -51,7 +53,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  await requireAuth(request);
+  const user = await requireAuth(request);
+  
+  if (!user.isAdmin) {
+    throw new Response("Unauthorized", { status: 403 });
+  }
   
   const formData = await request.formData();
   const action = formData.get('_action') as string;
@@ -59,6 +65,8 @@ export async function action({ request }: Route.ActionArgs) {
   
   const data = {
     round: formData.get('round') as string,
+    course: formData.get('course') as string,
+    teeTime: formData.get('teeTime') as string,
     golfer1Id: formData.get('golfer1Id') as string || undefined,
     golfer2Id: formData.get('golfer2Id') as string || undefined,
     golfer3Id: formData.get('golfer3Id') as string || undefined,
@@ -68,13 +76,16 @@ export async function action({ request }: Route.ActionArgs) {
 
   try {
     const validatedData = FoursomeSchema.parse(data);
-    const scoreValue = validatedData.score && validatedData.score !== '' ? parseInt(validatedData.score) : null;
+    const scoreValue = validatedData.score && validatedData.score !== '' ? parseInt(validatedData.score) : 0;
+    const teeTimeValue = new Date(validatedData.teeTime);
     
     if (action === 'edit' && foursomeId) {
       await prisma.foursome.update({
         where: { id: foursomeId },
         data: {
           round: validatedData.round,
+          course: validatedData.course,
+          teeTime: teeTimeValue,
           golfer1Id: validatedData.golfer1Id || null,
           golfer2Id: validatedData.golfer2Id || null,
           golfer3Id: validatedData.golfer3Id || null,
@@ -87,6 +98,8 @@ export async function action({ request }: Route.ActionArgs) {
       await prisma.foursome.create({
         data: {
           round: validatedData.round,
+          course: validatedData.course,
+          teeTime: teeTimeValue,
           golfer1Id: validatedData.golfer1Id || null,
           golfer2Id: validatedData.golfer2Id || null,
           golfer3Id: validatedData.golfer3Id || null,
@@ -125,18 +138,20 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Foursomes
           </h1>
-          <Button 
-            onClick={() => {
-              setIsFormOpen(!isFormOpen);
-              setEditingFoursome(null);
-            }}
-            className="mb-6"
-          >
-            {isFormOpen ? 'Cancel' : 'Create New Foursome'}
-          </Button>
+          {user.isAdmin && (
+            <Button 
+              onClick={() => {
+                setIsFormOpen(!isFormOpen);
+                setEditingFoursome(null);
+              }}
+              className="mb-6"
+            >
+              {isFormOpen ? 'Cancel' : 'Create New Foursome'}
+            </Button>
+          )}
         </div>
 
-        {(isFormOpen || editingFoursome) && (
+        {user.isAdmin && (isFormOpen || editingFoursome) && (
           <Card className="mb-8">
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -163,6 +178,37 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
                       <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-1">
+                    Course *
+                  </label>
+                  <select 
+                    id="course"
+                    name="course" 
+                    required
+                    defaultValue={editingFoursome?.course || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Select a course</option>
+                    <option value="BLACK">Black</option>
+                    <option value="SILVER">Silver</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="teeTime" className="block text-sm font-medium text-gray-700 mb-1">
+                    Tee Time *
+                  </label>
+                  <Input 
+                    id="teeTime"
+                    name="teeTime" 
+                    type="datetime-local" 
+                    required
+                    defaultValue={editingFoursome?.teeTime ? new Date(editingFoursome.teeTime).toISOString().slice(0, 16) : ''}
+                    className="w-full"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -244,7 +290,7 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
                     name="score" 
                     type="number" 
                     placeholder="e.g., -2 (under par) or +5 (over par)"
-                    defaultValue={editingFoursome?.score?.toString() || ''}
+                    defaultValue={editingFoursome?.score?.toString() || '0'}
                     className="w-full"
                   />
                 </div>
@@ -293,34 +339,37 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
               <Card key={foursome.id}>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {roundLabels[foursome.round as keyof typeof roundLabels]}
                       </h3>
                       <div className="space-y-1">
                         <p className="text-sm text-gray-600">
+                          <strong>Course:</strong> {foursome.course}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Tee Time:</strong> {new Date(foursome.teeTime).toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-600">
                           <strong>Players:</strong> {[foursome.golfer1?.name, foursome.golfer2?.name, foursome.golfer3?.name, foursome.golfer4?.name].filter(Boolean).join(', ')}
                         </p>
-                        {foursome.score !== null && (
-                          <p className="text-sm text-gray-600">
-                            <strong>Score:</strong> {foursome.score > 0 ? '+' : ''}{foursome.score}
-                          </p>
-                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          setEditingFoursome(foursome);
-                          setIsFormOpen(false);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <div className="text-xs text-gray-500">
-                        Created {new Date(foursome.createdAt).toLocaleDateString()}
+                    <div className="flex flex-col items-end gap-2">
+                      {user.isAdmin && (
+                        <Button 
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setEditingFoursome(foursome);
+                            setIsFormOpen(false);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                      <div className="text-2xl font-bold text-gray-900">
+                        {foursome.score > 0 ? '+' : ''}{foursome.score}
                       </div>
                     </div>
                   </div>

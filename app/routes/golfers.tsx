@@ -32,7 +32,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-  await requireAuth(request);
+  const user = await requireAuth(request);
+  
+  if (!user.isAdmin) {
+    throw new Response("Unauthorized", { status: 403 });
+  }
   
   const formData = await request.formData();
   const action = formData.get('_action') as string;
@@ -87,18 +91,20 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Golfers
           </h1>
-          <Button 
-            onClick={() => {
-              setIsFormOpen(!isFormOpen);
-              setEditingGolfer(null);
-            }}
-            className="mb-6"
-          >
-            {isFormOpen ? 'Cancel' : 'Add New Golfer'}
-          </Button>
+          {user.isAdmin && (
+            <Button 
+              onClick={() => {
+                setIsFormOpen(!isFormOpen);
+                setEditingGolfer(null);
+              }}
+              className="mb-6"
+            >
+              {isFormOpen ? 'Cancel' : 'Add New Golfer'}
+            </Button>
+          )}
         </div>
 
-        {(isFormOpen || editingGolfer) && (
+        {user.isAdmin && (isFormOpen || editingGolfer) && (
           <Card className="mb-8">
             <CardContent className="p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -210,7 +216,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    {user.isAdmin && (
                       <Button 
                         size="sm"
                         variant="secondary"
@@ -221,10 +227,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
                       >
                         Edit
                       </Button>
-                      <div className="text-xs text-gray-500">
-                        Added {new Date(golfer.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

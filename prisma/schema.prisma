@@ -17,6 +17,7 @@ model User {
   avatar    String?
   phone     String?
   password  String
+  isAdmin   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sessions  Session[]
@@ -47,7 +48,9 @@ model Golfer {
 model Foursome {
   id        String   @id @default(cuid())
   round     Round
-  score     Int?     // strokes above/below par, can be negative
+  course    Course   // golf course
+  teeTime   DateTime // tee time for the round
+  score     Int      @default(0) // strokes above/below par, can be negative
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   golfer1Id String?
@@ -65,4 +68,9 @@ enum Round {
   FRIDAY_AFTERNOON
   SATURDAY_MORNING
   SATURDAY_AFTERNOON
+}
+
+enum Course {
+  BLACK
+  SILVER
 }

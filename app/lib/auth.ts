@@ -7,6 +7,7 @@ export interface User {
   name: string;
   avatar?: string;
   phone?: string;
+  isAdmin: boolean;
 }
 
 export async function createUser(email: string, password: string, name: string) {
@@ -47,6 +48,7 @@ export async function authenticateUser(email: string, password: string): Promise
     name: user.name,
     avatar: user.avatar || undefined,
     phone: user.phone || undefined,
+    isAdmin: user.isAdmin,
   };
 }
 
@@ -84,6 +86,7 @@ export async function getSessionUser(token: string): Promise<User | null> {
     name: session.user.name,
     avatar: session.user.avatar || undefined,
     phone: session.user.phone || undefined,
+    isAdmin: session.user.isAdmin,
   };
 }
 
@@ -103,5 +106,6 @@ export async function updateUser(id: string, updates: Partial<Omit<User, 'id' | 
     name: user.name,
     avatar: user.avatar || undefined,
     phone: user.phone || undefined,
+    isAdmin: user.isAdmin,
   };
 }
