@@ -17,6 +17,19 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
+    
+    // Get sort parameter from URL
+    const url = new URL(request.url);
+    const sort = url.searchParams.get('sort') || 'teeTime';
+    const order = url.searchParams.get('order') || 'asc';
+    
+    // Define valid sort options
+    const validSorts = ['teeTime', 'score', 'createdAt'];
+    const validOrders = ['asc', 'desc'];
+    
+    const sortBy = validSorts.includes(sort) ? sort : 'teeTime';
+    const sortOrder = validOrders.includes(order) ? order : 'asc';
+    
     const foursomes = await prisma.foursome.findMany({
       include: {
         golfer1: true,
@@ -24,9 +37,10 @@ export async function loader({ request }: Route.LoaderArgs) {
         golfer3: true,
         golfer4: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { [sortBy]: sortOrder }
     });
-    return { user, foursomes };
+    
+    return { user, foursomes, currentSort: sortBy, currentOrder: sortOrder };
   } catch (response) {
     throw response;
   }
@@ -78,9 +92,56 @@ const roundLabels = {
   SATURDAY_AFTERNOON: 'Saturday Afternoon',
 };
 
+const getCourseBadgeClasses = (course: string) => {
+  const courseLower = course.toLowerCase();
+  if (courseLower === 'black') {
+    return 'bg-black text-white';
+  } else if (courseLower === 'silver') {
+    return 'bg-gray-400 text-black';
+  }
+  return 'bg-blue-500 text-white'; // Default for other courses
+};
+
+const formatTeeTime = (teeTime: string) => {
+  const date = new Date(teeTime);
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const day = dayNames[date.getDay()];
+  const time = date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit', 
+    hour12: true 
+  });
+  return `${day} ${time}`;
+};
+
 export default function Foursomes({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, foursomes } = loaderData;
+  const { user, foursomes, currentSort, currentOrder } = loaderData;
   const [deletingFoursomeId, setDeletingFoursomeId] = useState<string | null>(null);
+  
+  const getSortUrl = (sortBy: string) => {
+    const newOrder = currentSort === sortBy && currentOrder === 'asc' ? 'desc' : 'asc';
+    return `/foursomes?sort=${sortBy}&order=${newOrder}`;
+  };
+  
+  const getSortIcon = (sortBy: string) => {
+    if (currentSort !== sortBy) {
+      return '↕️';
+    }
+    return currentOrder === 'asc' ? '↑' : '↓';
+  };
+
+  const sortedFoursomes = [...foursomes].sort((a, b) => {
+    if (currentSort === 'teeTime') {
+      const aTime = new Date(a.teeTime).getTime();
+      const bTime = new Date(b.teeTime).getTime();
+      return currentOrder === 'asc' ? aTime - bTime : bTime - aTime;
+    } else if (currentSort === 'score') {
+      const aScore = a.score;
+      const bScore = b.score;
+      return currentOrder === 'asc' ? aScore - bScore : bScore - aScore;
+    }
+    return 0;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,6 +168,25 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
               </Link>
             )}
           </div>
+          
+          {/* Sort Controls */}
+          {foursomes.length > 0 && (
+            <div className="mt-4 flex gap-2 items-center">
+              <span className="text-sm text-gray-600">Sort by:</span>
+              <Link 
+                to={getSortUrl('teeTime')}
+                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+              >
+                Tee Time {getSortIcon('teeTime')}
+              </Link>
+              <Link 
+                to={getSortUrl('score')}
+                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+              >
+                Score {getSortIcon('score')}
+              </Link>
+            </div>
+          )}
         </div>
 
 
@@ -125,7 +205,7 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
 
         {/* Foursomes List */}
         <div className="grid gap-4">
-          {foursomes.length === 0 ? (
+          {sortedFoursomes.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <p className="text-gray-500">
@@ -134,20 +214,22 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
               </CardContent>
             </Card>
           ) : (
-            foursomes.map((foursome: any) => (
+            sortedFoursomes.map((foursome: any) => (
               <Card key={foursome.id}>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {roundLabels[foursome.round as keyof typeof roundLabels]}
-                      </h3>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {formatTeeTime(foursome.teeTime)}
+                        </h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCourseBadgeClasses(foursome.course)}`}>
+                          {foursome.course}
+                        </span>
+                      </div>
                       <div className="space-y-1">
                         <p className="text-sm text-gray-600">
-                          <strong>Course:</strong> {foursome.course}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <strong>Tee Time:</strong> {new Date(foursome.teeTime).toLocaleString()}
+                          <strong>Round:</strong> {roundLabels[foursome.round as keyof typeof roundLabels]}
                         </p>
                         <p className="text-sm text-gray-600">
                           <strong>Players:</strong> {[foursome.golfer1?.name, foursome.golfer2?.name, foursome.golfer3?.name, foursome.golfer4?.name].filter(Boolean).join(', ')}
