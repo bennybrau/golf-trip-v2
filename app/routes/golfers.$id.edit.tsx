@@ -49,7 +49,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       throw new Response("Golfer not found", { status: 404 });
     }
     
-    return { user, golfer };
+    // Preserve search parameters from the referring page
+    const url = new URL(request.url);
+    const sort = url.searchParams.get('sort');
+    const order = url.searchParams.get('order');
+    
+    return { user, golfer, sort, order };
   } catch (response) {
     throw response;
   }
@@ -93,7 +98,17 @@ export async function action({ request, params }: Route.ActionArgs) {
       }
     });
     
-    return redirect('/golfers');
+    // Preserve search parameters when redirecting
+    const url = new URL(request.url);
+    const sort = url.searchParams.get('sort');
+    const order = url.searchParams.get('order');
+    
+    const redirectParams = new URLSearchParams();
+    if (sort && sort !== 'createdAt') redirectParams.set('sort', sort);
+    if (order && order !== 'desc') redirectParams.set('order', order);
+    
+    const redirectUrl = redirectParams.toString() ? `/golfers?${redirectParams.toString()}` : '/golfers';
+    return redirect(redirectUrl);
   } catch (error) {
     console.error('Edit golfer error:', error);
     if (error instanceof z.ZodError) {
@@ -106,8 +121,17 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function EditGolfer({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfer } = loaderData;
+  const { user, golfer, sort, order } = loaderData;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Generate back URL with preserved search parameters
+  const getBackUrl = () => {
+    const params = new URLSearchParams();
+    if (sort && sort !== 'createdAt') params.set('sort', sort);
+    if (order && order !== 'desc') params.set('order', order);
+    const queryString = params.toString();
+    return queryString ? `/golfers?${queryString}` : '/golfers';
+  };
 
   const handleSubmit = () => {
     setIsSubmitting(true);
@@ -128,7 +152,7 @@ export default function EditGolfer({ loaderData, actionData }: Route.ComponentPr
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Link 
-              to="/golfers"
+              to={getBackUrl()}
               className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
             >
               ← Back to Golfers
@@ -232,7 +256,7 @@ export default function EditGolfer({ loaderData, actionData }: Route.ComponentPr
                     'Update Golfer'
                   )}
                 </Button>
-                <Link to="/golfers">
+                <Link to={getBackUrl()}>
                   <Button type="button" variant="secondary">
                     Cancel
                   </Button>

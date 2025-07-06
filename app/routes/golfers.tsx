@@ -17,10 +17,24 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
+    
+    // Get sort parameter from URL
+    const url = new URL(request.url);
+    const sort = url.searchParams.get('sort') || 'createdAt';
+    const order = url.searchParams.get('order') || 'desc';
+    
+    // Define valid sort options
+    const validSorts = ['name', 'createdAt'];
+    const validOrders = ['asc', 'desc'];
+    
+    const sortBy = validSorts.includes(sort) ? sort : 'createdAt';
+    const sortOrder = validOrders.includes(order) ? order : 'desc';
+    
     const golfers = await prisma.golfer.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { [sortBy]: sortOrder }
     });
-    return { user, golfers };
+    
+    return { user, golfers, currentSort: sortBy, currentOrder: sortOrder };
   } catch (response) {
     throw response;
   }
@@ -84,8 +98,29 @@ export async function action({ request }: Route.ActionArgs) {
 
 
 export default function Golfers({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfers } = loaderData;
+  const { user, golfers, currentSort, currentOrder } = loaderData;
   const [deletingGolferId, setDeletingGolferId] = useState<string | null>(null);
+  
+  const getSortUrl = (sortBy: string) => {
+    const newOrder = currentSort === sortBy && currentOrder === 'asc' ? 'desc' : 'asc';
+    return `/golfers?sort=${sortBy}&order=${newOrder}`;
+  };
+  
+  const getSortIcon = (sortBy: string) => {
+    if (currentSort !== sortBy) {
+      return '↕️'; // Both directions when not sorted by this column
+    }
+    return currentOrder === 'asc' ? '↑' : '↓';
+  };
+  
+  // Generate URL with current search parameters
+  const getUrlWithCurrentParams = (basePath: string) => {
+    const params = new URLSearchParams();
+    if (currentSort !== 'createdAt') params.set('sort', currentSort);
+    if (currentOrder !== 'desc') params.set('order', currentOrder);
+    const queryString = params.toString();
+    return queryString ? `${basePath}?${queryString}` : basePath;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,13 +140,32 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
             
             {/* Add Golfer Button (Admin Only) */}
             {user.isAdmin && (
-              <Link to="/golfers/new">
+              <Link to={getUrlWithCurrentParams('/golfers/new')}>
                 <Button>
                   Add Golfer
                 </Button>
               </Link>
             )}
           </div>
+          
+          {/* Sort Controls */}
+          {golfers.length > 0 && (
+            <div className="mt-4 flex gap-2 items-center">
+              <span className="text-sm text-gray-600">Sort by:</span>
+              <Link 
+                to={getSortUrl('name')}
+                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+              >
+                Name {getSortIcon('name')}
+              </Link>
+              <Link 
+                to={getSortUrl('createdAt')}
+                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+              >
+                Date Added {getSortIcon('createdAt')}
+              </Link>
+            </div>
+          )}
         </div>
 
 
@@ -170,7 +224,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
                     {user.isAdmin && (
                       <div className="flex gap-2">
                         {/* Edit Button */}
-                        <Link to={`/golfers/${golfer.id}/edit`}>
+                        <Link to={getUrlWithCurrentParams(`/golfers/${golfer.id}/edit`)}>
                           <Button 
                             size="sm"
                             variant="secondary"
