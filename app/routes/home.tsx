@@ -1,8 +1,9 @@
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui';
-import { ScoreCard, CabinCard, LeaderCard, TeeTimeCard } from '../components/dashboard';
+import { ScoreCard, CabinCard, LeaderCard, TeeTimeCard, WeatherCard } from '../components/dashboard';
 import { prisma } from '../lib/db';
+import { getWeatherForPlymouth } from '../lib/weather';
 import type { Route } from './+types/home';
 
 export function meta({}: Route.MetaArgs) {
@@ -33,6 +34,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     
     let totalScore = null;
     let nextTeeTime = null;
+    
+    // Fetch weather data for Plymouth, IN
+    const weather = await getWeatherForPlymouth();
     
     if (userWithGolfer?.golfer) {
       // Aggregate scores from all foursomes where this golfer participates
@@ -93,7 +97,8 @@ export async function loader({ request }: Route.LoaderArgs) {
       totalScore, 
       nextTeeTime,
       tournamentLeader,
-      leaderScore
+      leaderScore,
+      weather
     };
   } catch (response) {
     // If authentication fails, the requireAuth function throws a redirect response
@@ -102,20 +107,25 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { user, golfer, totalScore, nextTeeTime, tournamentLeader, leaderScore } = loaderData;
+  const { user, golfer, totalScore, nextTeeTime, tournamentLeader, leaderScore, weather } = loaderData;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation user={user} />
       
       <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {golfer ? golfer.name : user.name}!
-          </h1>
-          <p className="text-gray-600">
-            Here's your golf trip dashboard
-          </p>
+        <div className="mb-8 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {golfer ? golfer.name : user.name}!
+            </h1>
+            <p className="text-gray-600">
+              Here's your golf trip dashboard
+            </p>
+          </div>
+          <div className="w-full lg:w-80 flex-shrink-0">
+            <WeatherCard weather={weather} />
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
