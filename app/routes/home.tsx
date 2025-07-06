@@ -1,6 +1,7 @@
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui';
+import { ScoreCard, CabinCard, LeaderCard, TeeTimeCard } from '../components/dashboard';
 import { prisma } from '../lib/db';
 import type { Route } from './+types/home';
 
@@ -103,24 +104,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { user, golfer, totalScore, nextTeeTime, tournamentLeader, leaderScore } = loaderData;
 
-  const formatTeeTime = (teeTime: string | Date) => {
-    const date = typeof teeTime === 'string' ? new Date(teeTime) : teeTime;
-    return {
-      date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    };
-  };
-
-  const getRoundLabel = (round: string) => {
-    const labels = {
-      'FRIDAY_MORNING': 'Friday Morning',
-      'FRIDAY_AFTERNOON': 'Friday Afternoon',
-      'SATURDAY_MORNING': 'Saturday Morning',
-      'SATURDAY_AFTERNOON': 'Saturday Afternoon'
-    };
-    return labels[round as keyof typeof labels] || round;
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation user={user} />
@@ -136,114 +119,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Your Score Card */}
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-blue-600 mb-1">
-                    Your Score
-                  </h3>
-                  <div className="text-3xl font-bold text-blue-900">
-                    {totalScore !== null ? (
-                      <span>{totalScore > 0 ? '+' : ''}{totalScore}</span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-blue-700 mt-1">
-                    {!golfer 
-                      ? 'No golfer profile'
-                      : totalScore === null
-                      ? 'No rounds played'
-                      : 'Total tournament score'
-                    }
-                  </p>
-                </div>
-                <div className="text-blue-400 text-3xl">🏌️</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cabin Assignment Card */}
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-green-600 mb-1">
-                    Your Cabin
-                  </h3>
-                  <div className="text-3xl font-bold text-green-900">
-                    {golfer?.cabin || '-'}
-                  </div>
-                  <p className="text-xs text-green-700 mt-1">
-                    {golfer?.cabin ? `Cabin ${golfer.cabin}` : 'No assignment'}
-                  </p>
-                </div>
-                <div className="text-green-400 text-3xl">🏠</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tournament Leader Card */}
-          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-yellow-600 mb-1">
-                    Tournament Leader
-                  </h3>
-                  <div className="text-lg font-bold text-yellow-900 truncate">
-                    {tournamentLeader?.name || 'TBD'}
-                  </div>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    {leaderScore !== null ? (
-                      <span>{leaderScore > 0 ? '+' : ''}{leaderScore} strokes</span>
-                    ) : (
-                      'No scores yet'
-                    )}
-                  </p>
-                </div>
-                <div className="text-yellow-400 text-3xl">🏆</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Next Tee Time Card */}
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-purple-600 mb-1">
-                    Next Tee Time
-                  </h3>
-                  {nextTeeTime ? (
-                    <>
-                      <div className="text-lg font-bold text-purple-900">
-                        {formatTeeTime(nextTeeTime.teeTime).time}
-                      </div>
-                      <p className="text-xs text-purple-700 mt-1">
-                        {formatTeeTime(nextTeeTime.teeTime).date}
-                      </p>
-                      <p className="text-xs text-purple-600 mt-1">
-                        {getRoundLabel(nextTeeTime.round)}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-lg font-bold text-gray-400">
-                        None scheduled
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        No upcoming rounds
-                      </p>
-                    </>
-                  )}
-                </div>
-                <div className="text-purple-400 text-3xl">⏰</div>
-              </div>
-            </CardContent>
-          </Card>
+          <ScoreCard totalScore={totalScore} golfer={golfer} />
+          <CabinCard golfer={golfer} />
+          <LeaderCard tournamentLeader={tournamentLeader} leaderScore={leaderScore} />
+          <TeeTimeCard nextTeeTime={nextTeeTime} />
         </div>
 
         {/* Additional Info Section */}
