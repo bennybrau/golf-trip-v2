@@ -7,6 +7,7 @@ export default [
   route("account", "routes/account.tsx"),
   route("logout", "routes/logout.tsx"),
   route("users", "routes/users.tsx"),
+  route("users/new", "routes/users.new.tsx"),
   route("users/:id/edit", "routes/users.$id.edit.tsx"),
   route("golfers", "routes/golfers.tsx"),
   route("golfers/new", "routes/golfers.new.tsx"),

@@ -121,6 +121,13 @@ export default function Users({ loaderData, actionData }: { loaderData: any, act
                 Manage user accounts and their golfer associations
               </p>
             </div>
+            
+            {/* Add User Button */}
+            <Link to="/users/new">
+              <Button>
+                Add User
+              </Button>
+            </Link>
           </div>
         </div>
 

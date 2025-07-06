@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Form, useActionData, useLoaderData } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { updateUser, createUser } from '../lib/auth';
+import { updateUser } from '../lib/auth';
 import { updateProfileSchema } from '../lib/validation';
 import { Navigation } from '../components/Navigation';
 import { Button, Input, Card, CardHeader, CardContent, Alert, Avatar } from '../components/ui';
@@ -26,66 +26,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { user, allUsers };
 }
 
-const createUserSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  isAdmin: z.boolean().optional(),
-});
 
 export async function action({ request }: Route.ActionArgs) {
   const user = await requireAuth(request);
   const formData = await request.formData();
   const actionType = formData.get('_action') as string;
-  
-  if (actionType === 'create-user') {
-    // Only admins can create users
-    if (!user.isAdmin) {
-      throw new Response("Unauthorized", { status: 403 });
-    }
-    
-    const data = {
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      password: formData.get('password') as string,
-      isAdmin: formData.get('isAdmin') === 'on',
-    };
-    
-    const result = createUserSchema.safeParse(data);
-    
-    if (!result.success) {
-      return {
-        error: result.error.errors[0].message,
-        createUserErrors: result.error.flatten().fieldErrors,
-        createUserValues: data,
-      };
-    }
-    
-    try {
-      const { prisma } = await import('../lib/db');
-      
-      // Check if user with email already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email: result.data.email },
-      });
-      
-      if (existingUser) {
-        return {
-          error: 'A user with this email already exists',
-          createUserValues: data,
-        };
-      }
-      
-      await createUser(result.data.email, result.data.password, result.data.name, result.data.isAdmin || false);
-      return { success: true, message: 'User created successfully' };
-    } catch (error) {
-      console.error('User creation error:', error);
-      return {
-        error: 'Failed to create user',
-        createUserValues: data,
-      };
-    }
-  }
   
   if (actionType === 'toggle-admin') {
     // Only admins can modify admin status
@@ -147,7 +92,6 @@ export async function action({ request }: Route.ActionArgs) {
 export default function Account() {
   const { user, allUsers } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const [showCreateUser, setShowCreateUser] = useState(false);
 
   const displayUser = actionData?.user || user;
 
@@ -235,95 +179,10 @@ export default function Account() {
         {user.isAdmin && (
           <Card className="mt-8 shadow-xl">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">User Administration</h2>
-                  <p className="mt-2 text-gray-600">Manage admin privileges for all users</p>
-                </div>
-                <Button 
-                  onClick={() => setShowCreateUser(!showCreateUser)}
-                  variant="primary"
-                  size="sm"
-                >
-                  {showCreateUser ? 'Cancel' : 'Create User'}
-                </Button>
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900">User Administration</h2>
+              <p className="mt-2 text-gray-600">Manage admin privileges for all users</p>
             </CardHeader>
             <CardContent>
-              {showCreateUser && (
-                <Card className="mb-6 border-2 border-blue-200">
-                  <CardContent className="p-4">
-                    <h3 className="text-md font-semibold text-gray-900 mb-4">Create New User</h3>
-                    <Form method="post" className="space-y-4">
-                      <input type="hidden" name="_action" value="create-user" />
-                      
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                          <Input
-                            name="name"
-                            label="Full Name"
-                            type="text"
-                            required
-                            defaultValue={actionData?.createUserValues?.name as string || ''}
-                            placeholder="Enter full name"
-                            error={actionData?.createUserErrors?.name?.[0]}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Input
-                            name="email"
-                            label="Email Address"
-                            type="email"
-                            required
-                            defaultValue={actionData?.createUserValues?.email as string || ''}
-                            placeholder="Enter email address"
-                            error={actionData?.createUserErrors?.email?.[0]}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Input
-                            name="password"
-                            label="Password"
-                            type="password"
-                            required
-                            placeholder="Enter password (min 6 characters)"
-                            error={actionData?.createUserErrors?.password?.[0]}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center mt-6">
-                          <input
-                            type="checkbox"
-                            name="isAdmin"
-                            id="isAdmin"
-                            defaultChecked={actionData?.createUserValues?.isAdmin as boolean || false}
-                            className="mr-2"
-                          />
-                          <label htmlFor="isAdmin" className="text-sm font-medium text-gray-700">
-                            Make this user an admin
-                          </label>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button type="submit" variant="primary">
-                          Create User
-                        </Button>
-                        <Button 
-                          type="button" 
-                          variant="secondary"
-                          onClick={() => setShowCreateUser(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </Form>
-                  </CardContent>
-                </Card>
-              )}
-              
               <div className="space-y-4">
                 {allUsers.map((u) => (
                   <div key={u.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
