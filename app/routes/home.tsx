@@ -1,6 +1,7 @@
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent, Logo } from '../components/ui';
+import { prisma } from '../lib/db';
 import type { Route } from './+types/home';
 
 export function meta({}: Route.MetaArgs) {
@@ -13,7 +14,39 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
-    return { user };
+    
+    // Get user with their associated golfer
+    const userWithGolfer = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        golfer: {
+          include: {
+            foursomesAsPlayer1: true,
+            foursomesAsPlayer2: true,
+            foursomesAsPlayer3: true,
+            foursomesAsPlayer4: true,
+          }
+        }
+      }
+    });
+    
+    let totalScore = null;
+    
+    if (userWithGolfer?.golfer) {
+      // Aggregate scores from all foursomes where this golfer participates
+      const allFoursomes = [
+        ...userWithGolfer.golfer.foursomesAsPlayer1,
+        ...userWithGolfer.golfer.foursomesAsPlayer2,
+        ...userWithGolfer.golfer.foursomesAsPlayer3,
+        ...userWithGolfer.golfer.foursomesAsPlayer4,
+      ];
+      
+      if (allFoursomes.length > 0) {
+        totalScore = allFoursomes.reduce((sum, foursome) => sum + foursome.score, 0);
+      }
+    }
+    
+    return { user, golfer: userWithGolfer?.golfer || null, totalScore };
   } catch (response) {
     // If authentication fails, the requireAuth function throws a redirect response
     throw response;
@@ -21,7 +54,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { user } = loaderData;
+  const { user, golfer, totalScore } = loaderData;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -41,17 +74,48 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             Your premier golf experience awaits
           </p>
           
-          <Card className="max-w-2xl mx-auto">
-            <CardContent className="p-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                Hello, {user.name}!
-              </h2>
-              <p className="text-gray-600">
-                Welcome to your golf management dashboard. Here you can track your games, 
-                manage your profile, and connect with other golf enthusiasts.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="grid gap-6 max-w-4xl mx-auto">
+            {/* Welcome Card */}
+            <Card>
+              <CardContent className="p-8">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                  Hello, {user.name}!
+                </h2>
+                <p className="text-gray-600">
+                  Welcome to your golf management dashboard. Here you can track your games, 
+                  manage your profile, and connect with other golf enthusiasts.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Score Card */}
+            <Card>
+              <CardContent className="p-8">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                  Your Tournament Score
+                </h2>
+                <div className="text-center">
+                  <div className="text-6xl font-bold text-green-600 mb-2">
+                    {totalScore !== null ? totalScore : 'N/A'}
+                  </div>
+                  <p className="text-gray-600">
+                    {!golfer 
+                      ? 'No golfer profile associated with your account'
+                      : totalScore === null
+                      ? 'You haven\'t participated in any foursomes yet'
+                      : 'Total score across all foursomes'
+                    }
+                  </p>
+                  {golfer && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Playing as: {golfer.name}
+                      {golfer.cabin && ` • Cabin ${golfer.cabin}`}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
