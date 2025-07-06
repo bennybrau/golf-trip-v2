@@ -1,6 +1,6 @@
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Logo } from '../components/ui';
+import { Card, CardContent } from '../components/ui';
 import { prisma } from '../lib/db';
 import type { Route } from './+types/home';
 
@@ -62,12 +62,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       
       <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <div className="flex justify-center mb-8">
-            <Logo size="lg" />
-          </div>
-          
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Scaletta Golf Trip
+            Hello, {golfer ? golfer.name : user.name}!
           </h1>
           
           <p className="text-xl text-gray-600 mb-8">
@@ -75,18 +71,43 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </p>
           
           <div className="grid gap-6 max-w-4xl mx-auto">
-            {/* Welcome Card */}
-            <Card>
-              <CardContent className="p-8">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                  Hello, {user.name}!
-                </h2>
-                <p className="text-gray-600">
-                  Welcome to your golf management dashboard. Here you can track your games, 
-                  manage your profile, and connect with other golf enthusiasts.
-                </p>
-              </CardContent>
-            </Card>
+            {/* Cabin Card */}
+            {golfer && (
+              <Card>
+                <CardContent className="p-8">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                    Your Cabin Assignment
+                  </h2>
+                  <div className="text-center">
+                    {golfer.cabin ? (
+                      <>
+                        <div className="text-6xl font-bold text-blue-600 mb-2">
+                          {golfer.cabin}
+                        </div>
+                        <p className="text-gray-600">
+                          You are assigned to Cabin {golfer.cabin}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Playing as: {golfer.name}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-4xl font-bold text-gray-400 mb-2">
+                          No Assignment
+                        </div>
+                        <p className="text-gray-600">
+                          You don't have a cabin assignment yet
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          Playing as: {golfer.name}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Score Card */}
             <Card>
@@ -109,7 +130,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   {golfer && (
                     <p className="text-sm text-gray-500 mt-2">
                       Playing as: {golfer.name}
-                      {golfer.cabin && ` • Cabin ${golfer.cabin}`}
                     </p>
                   )}
                 </div>

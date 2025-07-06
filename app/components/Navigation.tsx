@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Form } from 'react-router';
+import { Link, Form, useLocation } from 'react-router';
 import { Avatar, Logo } from './ui';
 import type { User } from '../lib/auth';
 
@@ -9,6 +9,23 @@ interface NavigationProps {
 
 export function Navigation({ user }: NavigationProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  
+  const getNavLinkClasses = (path: string, isMobile = false) => {
+    const isActive = location.pathname === path || 
+      (path !== '/' && location.pathname.startsWith(path));
+    
+    const baseClasses = isMobile 
+      ? "block px-3 py-2 rounded-md text-base font-medium transition-colors"
+      : "px-3 py-2 rounded-md text-sm font-medium transition-colors";
+    
+    if (isActive) {
+      return `${baseClasses} bg-green-100 text-green-800`;
+    }
+    
+    return `${baseClasses} text-gray-700 hover:text-green-600 ${isMobile ? 'hover:bg-gray-50' : ''}`;
+  };
+
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,35 +42,35 @@ export function Navigation({ user }: NavigationProps) {
           <div className="hidden md:flex items-center space-x-4">
             <Link
               to="/"
-              className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className={getNavLinkClasses('/')}
             >
               Home
             </Link>
             
             <Link
               to="/golfers"
-              className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className={getNavLinkClasses('/golfers')}
             >
               Golfers
             </Link>
             
             <Link
               to="/foursomes"
-              className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className={getNavLinkClasses('/foursomes')}
             >
               Foursomes
             </Link>
             
             <Link
               to="/gallery"
-              className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className={getNavLinkClasses('/gallery')}
             >
               Gallery
             </Link>
             
             <Link
               to="/champions"
-              className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              className={getNavLinkClasses('/champions')}
             >
               Champions
             </Link>
@@ -61,7 +78,7 @@ export function Navigation({ user }: NavigationProps) {
             {user.isAdmin && (
               <Link
                 to="/users"
-                className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className={getNavLinkClasses('/users')}
               >
                 Users
               </Link>
@@ -136,7 +153,7 @@ export function Navigation({ user }: NavigationProps) {
             <div className="space-y-1">
               <Link
                 to="/"
-                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                className={getNavLinkClasses('/', true)}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Home
@@ -144,7 +161,7 @@ export function Navigation({ user }: NavigationProps) {
               
               <Link
                 to="/golfers"
-                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                className={getNavLinkClasses('/golfers', true)}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Golfers
@@ -152,7 +169,7 @@ export function Navigation({ user }: NavigationProps) {
               
               <Link
                 to="/foursomes"
-                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                className={getNavLinkClasses('/foursomes', true)}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Foursomes
@@ -160,7 +177,7 @@ export function Navigation({ user }: NavigationProps) {
               
               <Link
                 to="/gallery"
-                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                className={getNavLinkClasses('/gallery', true)}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Gallery
@@ -168,7 +185,7 @@ export function Navigation({ user }: NavigationProps) {
               
               <Link
                 to="/champions"
-                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                className={getNavLinkClasses('/champions', true)}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Champions
@@ -177,7 +194,7 @@ export function Navigation({ user }: NavigationProps) {
               {user.isAdmin && (
                 <Link
                   to="/users"
-                  className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                  className={getNavLinkClasses('/users', true)}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Users
