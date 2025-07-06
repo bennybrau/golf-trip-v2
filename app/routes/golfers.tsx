@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button } from '../components/ui';
+import { Card, CardContent, Button, Spinner } from '../components/ui';
 import { prisma } from '../lib/db';
 import type { Route } from './+types/golfers';
 
@@ -25,9 +26,66 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 }
 
+export async function action({ request }: Route.ActionArgs) {
+  const user = await requireAuth(request);
+  
+  if (!user.isAdmin) {
+    throw new Response("Unauthorized", { status: 403 });
+  }
+  
+  const formData = await request.formData();
+  const action = formData.get('_action') as string;
+  
+  if (action === 'delete-golfer') {
+    const golferId = formData.get('golferId') as string;
+    
+    try {
+      // Check if golfer exists
+      const golfer = await prisma.golfer.findUnique({
+        where: { id: golferId },
+        include: {
+          championships: true,
+          foursomesAsPlayer1: true,
+          foursomesAsPlayer2: true,
+          foursomesAsPlayer3: true,
+          foursomesAsPlayer4: true,
+        },
+      });
 
-export default function Golfers({ loaderData }: Route.ComponentProps) {
+      if (!golfer) {
+        return { error: "Golfer not found" };
+      }
+
+      // Check if golfer has associated records
+      const hasChampionships = golfer.championships.length > 0;
+      const hasForusomes = golfer.foursomesAsPlayer1.length > 0 || 
+                           golfer.foursomesAsPlayer2.length > 0 || 
+                           golfer.foursomesAsPlayer3.length > 0 || 
+                           golfer.foursomesAsPlayer4.length > 0;
+      
+      if (hasChampionships || hasForusomes) {
+        return { error: "Cannot delete golfer. They have associated championships or foursome records." };
+      }
+      
+      // Delete the golfer
+      await prisma.golfer.delete({
+        where: { id: golferId },
+      });
+      
+      return { success: true, message: 'Golfer deleted successfully' };
+    } catch (error) {
+      console.error('Golfer delete error:', error);
+      return { error: "Failed to delete golfer" };
+    }
+  }
+  
+  return { error: "Invalid action" };
+}
+
+
+export default function Golfers({ loaderData, actionData }: Route.ComponentProps) {
   const { user, golfers } = loaderData;
+  const [deletingGolferId, setDeletingGolferId] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,6 +114,19 @@ export default function Golfers({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
+
+        {/* Action Messages */}
+        {actionData?.error && (
+          <div className="mb-6 text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
+            {actionData.error}
+          </div>
+        )}
+        
+        {actionData?.success && (
+          <div className="mb-6 text-green-600 text-sm bg-green-50 border border-green-200 rounded-md p-3">
+            {actionData.message}
+          </div>
+        )}
 
         {/* Golfers List */}
         <div className="grid gap-4">
@@ -87,19 +158,59 @@ export default function Golfers({ loaderData }: Route.ComponentProps) {
                             Phone: {golfer.phone}
                           </p>
                         )}
+                        {golfer.cabin && (
+                          <p className="text-sm text-gray-600">
+                            <strong>Cabin:</strong> {golfer.cabin}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
-                    {/* Edit Button (Admin Only) */}
+                    {/* Edit & Delete Buttons (Admin Only) */}
                     {user.isAdmin && (
-                      <Link to={`/golfers/${golfer.id}/edit`}>
-                        <Button 
-                          size="sm"
-                          variant="secondary"
+                      <div className="flex gap-2">
+                        {/* Edit Button */}
+                        <Link to={`/golfers/${golfer.id}/edit`}>
+                          <Button 
+                            size="sm"
+                            variant="secondary"
+                          >
+                            Edit
+                          </Button>
+                        </Link>
+                        
+                        {/* Delete Button */}
+                        <form 
+                          method="post" 
+                          className="inline"
+                          onSubmit={(e) => {
+                            if (!confirm(`Are you sure you want to delete ${golfer.name}? This action cannot be undone.`)) {
+                              e.preventDefault();
+                              return false;
+                            }
+                            setDeletingGolferId(golfer.id);
+                            return true;
+                          }}
                         >
-                          Edit
-                        </Button>
-                      </Link>
+                          <input type="hidden" name="_action" value="delete-golfer" />
+                          <input type="hidden" name="golferId" value={golfer.id} />
+                          <Button
+                            type="submit"
+                            variant="danger"
+                            size="sm"
+                            disabled={deletingGolferId === golfer.id}
+                          >
+                            {deletingGolferId === golfer.id ? (
+                              <div className="flex items-center gap-1">
+                                <Spinner size="sm" />
+                                Deleting...
+                              </div>
+                            ) : (
+                              'Delete'
+                            )}
+                          </Button>
+                        </form>
+                      </div>
                     )}
                   </div>
                 </CardContent>

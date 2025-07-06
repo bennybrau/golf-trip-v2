@@ -18,6 +18,16 @@ const GolferSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
+  cabin: z.string().optional(),
+}).refine((data) => {
+  if (data.cabin && data.cabin !== '') {
+    const cabinNum = parseInt(data.cabin);
+    return !isNaN(cabinNum) && cabinNum >= 1 && cabinNum <= 4;
+  }
+  return true;
+}, {
+  message: "Cabin must be a number between 1 and 4",
+  path: ["cabin"]
 });
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -46,6 +56,7 @@ export async function action({ request }: Route.ActionArgs) {
     name: formData.get('name') as string,
     email: formData.get('email') as string || undefined,
     phone: formData.get('phone') as string || undefined,
+    cabin: formData.get('cabin') as string || undefined,
   };
 
   try {
@@ -53,8 +64,10 @@ export async function action({ request }: Route.ActionArgs) {
     
     await prisma.golfer.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
         email: validatedData.email || null,
+        phone: validatedData.phone || null,
+        cabin: validatedData.cabin && validatedData.cabin !== '' ? parseInt(validatedData.cabin) : null,
       }
     });
     
@@ -154,6 +167,26 @@ export default function NewGolfer({ loaderData, actionData }: Route.ComponentPro
                   placeholder="Enter phone number"
                   className="w-full"
                 />
+              </div>
+              
+              <div>
+                <label htmlFor="cabin" className="block text-sm font-medium text-gray-700 mb-2">
+                  Cabin (Optional)
+                </label>
+                <select 
+                  id="cabin"
+                  name="cabin" 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="">Select a cabin</option>
+                  <option value="1">Cabin 1</option>
+                  <option value="2">Cabin 2</option>
+                  <option value="3">Cabin 3</option>
+                  <option value="4">Cabin 4</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Assign the golfer to a cabin (1-4)
+                </p>
               </div>
 
               {actionData?.error && (

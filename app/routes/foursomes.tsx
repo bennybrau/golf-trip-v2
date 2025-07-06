@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button } from '../components/ui';
+import { Card, CardContent, Button, Spinner } from '../components/ui';
 import { prisma } from '../lib/db';
 import type { Route } from './+types/foursomes';
 
@@ -31,6 +32,44 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 }
 
+export async function action({ request }: Route.ActionArgs) {
+  const user = await requireAuth(request);
+  
+  if (!user.isAdmin) {
+    throw new Response("Unauthorized", { status: 403 });
+  }
+  
+  const formData = await request.formData();
+  const action = formData.get('_action') as string;
+  
+  if (action === 'delete-foursome') {
+    const foursomeId = formData.get('foursomeId') as string;
+    
+    try {
+      // Check if foursome exists
+      const foursome = await prisma.foursome.findUnique({
+        where: { id: foursomeId },
+      });
+
+      if (!foursome) {
+        return { error: "Foursome not found" };
+      }
+      
+      // Delete the foursome
+      await prisma.foursome.delete({
+        where: { id: foursomeId },
+      });
+      
+      return { success: true, message: 'Foursome deleted successfully' };
+    } catch (error) {
+      console.error('Foursome delete error:', error);
+      return { error: "Failed to delete foursome" };
+    }
+  }
+  
+  return { error: "Invalid action" };
+}
+
 
 const roundLabels = {
   FRIDAY_MORNING: 'Friday Morning',
@@ -39,8 +78,9 @@ const roundLabels = {
   SATURDAY_AFTERNOON: 'Saturday Afternoon',
 };
 
-export default function Foursomes({ loaderData }: Route.ComponentProps) {
+export default function Foursomes({ loaderData, actionData }: Route.ComponentProps) {
   const { user, foursomes } = loaderData;
+  const [deletingFoursomeId, setDeletingFoursomeId] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -69,6 +109,19 @@ export default function Foursomes({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
+
+        {/* Action Messages */}
+        {actionData?.error && (
+          <div className="mb-6 text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
+            {actionData.error}
+          </div>
+        )}
+        
+        {actionData?.success && (
+          <div className="mb-6 text-green-600 text-sm bg-green-50 border border-green-200 rounded-md p-3">
+            {actionData.message}
+          </div>
+        )}
 
         {/* Foursomes List */}
         <div className="grid gap-4">
@@ -102,16 +155,52 @@ export default function Foursomes({ loaderData }: Route.ComponentProps) {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      {/* Edit Button (Admin Only) */}
+                      {/* Edit & Delete Buttons (Admin Only) */}
                       {user.isAdmin && (
-                        <Link to={`/foursomes/${foursome.id}/edit`}>
-                          <Button 
-                            size="sm"
-                            variant="secondary"
+                        <div className="flex gap-2">
+                          {/* Edit Button */}
+                          <Link to={`/foursomes/${foursome.id}/edit`}>
+                            <Button 
+                              size="sm"
+                              variant="secondary"
+                            >
+                              Edit
+                            </Button>
+                          </Link>
+                          
+                          {/* Delete Button */}
+                          <form 
+                            method="post" 
+                            className="inline"
+                            onSubmit={(e) => {
+                              const roundName = roundLabels[foursome.round as keyof typeof roundLabels];
+                              if (!confirm(`Are you sure you want to delete the ${roundName} foursome? This action cannot be undone.`)) {
+                                e.preventDefault();
+                                return false;
+                              }
+                              setDeletingFoursomeId(foursome.id);
+                              return true;
+                            }}
                           >
-                            Edit
-                          </Button>
-                        </Link>
+                            <input type="hidden" name="_action" value="delete-foursome" />
+                            <input type="hidden" name="foursomeId" value={foursome.id} />
+                            <Button
+                              type="submit"
+                              variant="danger"
+                              size="sm"
+                              disabled={deletingFoursomeId === foursome.id}
+                            >
+                              {deletingFoursomeId === foursome.id ? (
+                                <div className="flex items-center gap-1">
+                                  <Spinner size="sm" />
+                                  Deleting...
+                                </div>
+                              ) : (
+                                'Delete'
+                              )}
+                            </Button>
+                          </form>
+                        </div>
                       )}
                       <div className="text-2xl font-bold text-gray-900">
                         {foursome.score > 0 ? '+' : ''}{foursome.score}
