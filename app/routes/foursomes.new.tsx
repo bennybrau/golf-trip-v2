@@ -41,8 +41,17 @@ export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
     
+    // Get URL parameters to preserve when redirecting
+    const url = new URL(request.url);
+    const sort = url.searchParams.get('sort');
+    const order = url.searchParams.get('order');
+    
     if (!user.isAdmin) {
-      throw redirect('/foursomes');
+      const params = new URLSearchParams();
+      if (sort) params.set('sort', sort);
+      if (order) params.set('order', order);
+      const queryString = params.toString();
+      throw redirect(queryString ? `/foursomes?${queryString}` : '/foursomes');
     }
     
     // Get all golfers for the form
@@ -50,7 +59,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       orderBy: { name: 'asc' }
     });
     
-    return { user, golfers };
+    return { user, golfers, sort, order };
   } catch (response) {
     throw response;
   }
@@ -62,6 +71,11 @@ export async function action({ request }: Route.ActionArgs) {
   if (!user.isAdmin) {
     throw new Response("Unauthorized", { status: 403 });
   }
+  
+  // Get URL parameters to preserve when redirecting
+  const url = new URL(request.url);
+  const sort = url.searchParams.get('sort');
+  const order = url.searchParams.get('order');
   
   const formData = await request.formData();
   const data = {
@@ -93,7 +107,13 @@ export async function action({ request }: Route.ActionArgs) {
       }
     });
     
-    return redirect('/foursomes');
+    // Preserve URL parameters when redirecting back
+    const params = new URLSearchParams();
+    if (sort) params.set('sort', sort);
+    if (order) params.set('order', order);
+    const queryString = params.toString();
+    
+    return redirect(queryString ? `/foursomes?${queryString}` : '/foursomes');
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { error: error.errors[0].message };
@@ -103,8 +123,17 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function NewFoursome({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfers = [] } = loaderData;
+  const { user, golfers = [], sort, order } = loaderData;
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Generate URL with current search parameters
+  const getUrlWithCurrentParams = (basePath: string) => {
+    const params = new URLSearchParams();
+    if (sort) params.set('sort', sort);
+    if (order) params.set('order', order);
+    const queryString = params.toString();
+    return queryString ? `${basePath}?${queryString}` : basePath;
+  };
 
   const handleSubmit = () => {
     setIsSubmitting(true);
@@ -125,7 +154,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Link 
-              to="/foursomes"
+              to={getUrlWithCurrentParams('/foursomes')}
               className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
             >
               ← Back to Foursomes
@@ -309,7 +338,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     'Create Foursome'
                   )}
                 </Button>
-                <Link to="/foursomes">
+                <Link to={getUrlWithCurrentParams('/foursomes')}>
                   <Button type="button" variant="secondary">
                     Cancel
                   </Button>

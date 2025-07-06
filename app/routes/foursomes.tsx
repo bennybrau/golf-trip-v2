@@ -129,6 +129,15 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
     }
     return currentOrder === 'asc' ? '↑' : '↓';
   };
+  
+  // Generate URL with current search parameters
+  const getUrlWithCurrentParams = (basePath: string) => {
+    const params = new URLSearchParams();
+    if (currentSort !== 'teeTime') params.set('sort', currentSort);
+    if (currentOrder !== 'asc') params.set('order', currentOrder);
+    const queryString = params.toString();
+    return queryString ? `${basePath}?${queryString}` : basePath;
+  };
 
   const sortedFoursomes = [...foursomes].sort((a, b) => {
     if (currentSort === 'teeTime') {
@@ -161,7 +170,7 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
             
             {/* Add Foursome Button (Admin Only) */}
             {user.isAdmin && (
-              <Link to="/foursomes/new">
+              <Link to={getUrlWithCurrentParams('/foursomes/new')}>
                 <Button>
                   Add Foursome
                 </Button>
@@ -241,7 +250,7 @@ export default function Foursomes({ loaderData, actionData }: Route.ComponentPro
                       {user.isAdmin && (
                         <div className="flex gap-2">
                           {/* Edit Button */}
-                          <Link to={`/foursomes/${foursome.id}/edit`}>
+                          <Link to={getUrlWithCurrentParams(`/foursomes/${foursome.id}/edit`)}>
                             <Button 
                               size="sm"
                               variant="secondary"
