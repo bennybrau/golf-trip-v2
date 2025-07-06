@@ -14,9 +14,11 @@ model User {
   avatar    String?
   phone     String?
   password  String
+  golferId  String?    @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   isAdmin   Boolean    @default(false)
+  golfer    Golfer?    @relation(fields: [golferId], references: [id], onDelete: SetNull)
   champions Champion[]
   photos    Photo[]
   sessions  Session[]
@@ -39,6 +41,7 @@ model Golfer {
   cabin              Int?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
+  user               User?
   championships      Champion[]
   foursomesAsPlayer1 Foursome[] @relation("Player1")
   foursomesAsPlayer2 Foursome[] @relation("Player2")
