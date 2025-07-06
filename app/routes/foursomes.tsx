@@ -8,7 +8,7 @@ import type { Route } from './+types/foursomes';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Scaletta Golf - Foursomes" },
+    { title: "Foursomes - Scaletta Golf Trip" },
     { name: "description", content: "Manage foursomes for each round" },
   ];
 }

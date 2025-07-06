@@ -17,7 +17,7 @@ export function Navigation({ user }: NavigationProps) {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <Logo size="sm" />
-              <span className="text-xl font-bold text-gray-900">Scaletta Golf</span>
+              <span className="text-xl font-bold text-gray-900">Scaletta Golf Trip</span>
             </Link>
           </div>
 

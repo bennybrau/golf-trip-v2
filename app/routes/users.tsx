@@ -7,7 +7,7 @@ import { prisma } from '../lib/db';
 
 export function meta() {
   return [
-    { title: "Scaletta Golf - Users" },
+    { title: "Users - Scaletta Golf Trip" },
     { name: "description", content: "Manage users in your system" },
   ];
 }

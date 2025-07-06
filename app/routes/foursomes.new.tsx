@@ -9,7 +9,7 @@ import type { Route } from './+types/foursomes.new';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Create New Foursome - Scaletta Golf" },
+    { title: "Create New Foursome - Scaletta Golf Trip" },
     { name: "description", content: "Create a new foursome for a round" },
   ];
 }

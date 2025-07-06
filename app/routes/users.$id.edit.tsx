@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 export function meta() {
   return [
-    { title: "Edit User - Scaletta Golf" },
+    { title: "Edit User - Scaletta Golf Trip" },
     { name: "description", content: "Edit user details and golfer association" },
   ];
 }

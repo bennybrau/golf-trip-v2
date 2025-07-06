@@ -9,7 +9,7 @@ import type { Route } from './+types/foursomes.$id.edit';
 
 export function meta({ params }: Route.MetaArgs) {
   return [
-    { title: "Edit Foursome - Scaletta Golf" },
+    { title: "Edit Foursome - Scaletta Golf Trip" },
     { name: "description", content: `Edit foursome details` },
   ];
 }

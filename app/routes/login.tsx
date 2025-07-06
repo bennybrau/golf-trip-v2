@@ -66,7 +66,7 @@ export default function Login() {
               <div className="flex justify-center mb-4">
                 <Logo />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900">Scaletta Golf</h2>
+              <h2 className="text-3xl font-bold text-gray-900">Scaletta Golf Trip</h2>
               <p className="mt-2 text-gray-600">Sign in to your account</p>
             </div>
 

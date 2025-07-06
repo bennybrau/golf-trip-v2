@@ -6,7 +6,7 @@ import type { Route } from './+types/home';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Scaletta Golf - Home" },
+    { title: "Home - Scaletta Golf Trip" },
     { name: "description", content: "Your premier golf experience" },
   ];
 }
@@ -67,7 +67,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
           
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Scaletta Golf
+            Scaletta Golf Trip
           </h1>
           
           <p className="text-xl text-gray-600 mb-8">

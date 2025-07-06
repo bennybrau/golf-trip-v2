@@ -10,7 +10,7 @@ import type { Route } from './+types/gallery';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Scaletta Golf - Photo Gallery" },
+    { title: "Photo Gallery - Scaletta Golf Trip" },
     { name: "description", content: "View photos from the golf trip" },
   ];
 }

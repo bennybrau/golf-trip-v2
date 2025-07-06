@@ -9,7 +9,7 @@ import type { Route } from './+types/golfers.new';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Add New Golfer - Scaletta Golf" },
+    { title: "Add New Golfer - Scaletta Golf Trip" },
     { name: "description", content: "Add a new golfer to the system" },
   ];
 }

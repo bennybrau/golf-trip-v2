@@ -9,7 +9,7 @@ import type { Route } from './+types/champions';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Scaletta Golf - Champions" },
+    { title: "Champions - Scaletta Golf Trip" },
     { name: "description", content: "Past tournament champions" },
   ];
 }

@@ -8,8 +8,8 @@ import { z } from 'zod';
 
 export function meta() {
   return [
-    { title: "Create Account - Scaletta Golf" },
-    { name: "description", content: "Create your account to join Scaletta Golf" },
+    { title: "Create Account - Scaletta Golf Trip" },
+    { name: "description", content: "Create your account to join Scaletta Golf Trip" },
   ];
 }
 
@@ -117,7 +117,7 @@ export default function Register() {
                 <Logo />
               </div>
               <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
-              <p className="mt-2 text-gray-600">Join Scaletta Golf</p>
+              <p className="mt-2 text-gray-600">Join Scaletta Golf Trip</p>
             </div>
 
             <Form method="post" className="space-y-6" onSubmit={handleSubmit}>

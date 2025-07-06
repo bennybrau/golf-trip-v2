@@ -1,4 +1,4 @@
-# ⛳ Scaletta Golf
+# ⛳ Scaletta Golf Trip
 
 A modern golf management application built with React Router v7, featuring user authentication, session management, and a responsive design tailored for golf enthusiasts.
 

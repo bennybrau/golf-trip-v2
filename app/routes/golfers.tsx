@@ -8,7 +8,7 @@ import type { Route } from './+types/golfers';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Scaletta Golf - Golfers" },
+    { title: "Golfers - Scaletta Golf Trip" },
     { name: "description", content: "Manage golfers in your system" },
   ];
 }
