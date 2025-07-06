@@ -10,7 +10,7 @@ export interface User {
   isAdmin: boolean;
 }
 
-export async function createUser(email: string, password: string, name: string, isAdmin: boolean = false) {
+export async function createUser(email: string, password: string, name: string, isAdmin: boolean = false, phone?: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
   
   return prisma.user.create({
@@ -18,29 +18,26 @@ export async function createUser(email: string, password: string, name: string, 
       email,
       password: hashedPassword,
       name,
+      phone: phone || null,
       isAdmin,
     },
   });
 }
 
 export async function authenticateUser(email: string, password: string): Promise<User | null> {
-  let user = await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { email },
   });
 
-  // If user doesn't exist, create them (for demo purposes)
+  // Return null if user doesn't exist
   if (!user) {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name: email.split('@')[0], // Use email prefix as default name
-      },
-    });
-  } else {
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) return null;
+    return null;
+  }
+
+  // Check password
+  const isValidPassword = await bcrypt.compare(password, user.password);
+  if (!isValidPassword) {
+    return null;
   }
 
   return {

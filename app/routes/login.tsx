@@ -1,4 +1,4 @@
-import { Form, redirect, useActionData } from 'react-router';
+import { Form, redirect, useActionData, Link } from 'react-router';
 import { authenticateUser, createSession } from '../lib/auth';
 import { createSessionCookie, getSessionToken } from '../lib/session';
 import { loginSchema } from '../lib/validation';
@@ -103,7 +103,10 @@ export default function Login() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
-                Demo: Use any email and password to create an account
+                Don't have an account?{' '}
+                <Link to="/register" className="text-green-600 hover:text-green-500 font-medium">
+                  Create one here
+                </Link>
               </p>
             </div>
           </CardContent>
