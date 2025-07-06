@@ -8,4 +8,5 @@ export default [
   route("golfers", "routes/golfers.tsx"),
   route("foursomes", "routes/foursomes.tsx"),
   route("gallery", "routes/gallery.tsx"),
+  route("champions", "routes/champions.tsx"),
 ] satisfies RouteConfig;

@@ -51,6 +51,13 @@ export function Navigation({ user }: NavigationProps) {
               Gallery
             </Link>
             
+            <Link
+              to="/champions"
+              className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Champions
+            </Link>
+            
             <div className="relative group">
               <button className="flex items-center space-x-2 text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 <Avatar src={user.avatar} alt={user.name} name={user.name} size="sm" />
@@ -148,6 +155,14 @@ export function Navigation({ user }: NavigationProps) {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Gallery
+              </Link>
+              
+              <Link
+                to="/champions"
+                className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Champions
               </Link>
               
               {/* Mobile User Menu */}
