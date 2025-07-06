@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { Pencil, Trash2 } from 'lucide-react';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent, Button, Spinner } from '../components/ui';
@@ -190,7 +191,7 @@ export default function Users({ loaderData, actionData }: { loaderData: any, act
                       <div className="flex items-center gap-2 ml-4">
                         <Link to={`/users/${userItem.id}/edit`}>
                           <Button size="sm" variant="secondary">
-                            Edit
+                            <Pencil size={16} />
                           </Button>
                         </Link>
                         
@@ -222,7 +223,7 @@ export default function Users({ loaderData, actionData }: { loaderData: any, act
                                   Deleting...
                                 </div>
                               ) : (
-                                'Delete'
+                                <Trash2 size={16} />
                               )}
                             </Button>
                           </form>

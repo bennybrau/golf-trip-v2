@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { Pencil, Trash2 } from 'lucide-react';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent, Button, Spinner } from '../components/ui';
@@ -20,21 +21,64 @@ export async function loader({ request }: Route.LoaderArgs) {
     
     // Get sort parameter from URL
     const url = new URL(request.url);
-    const sort = url.searchParams.get('sort') || 'createdAt';
-    const order = url.searchParams.get('order') || 'desc';
+    const sort = url.searchParams.get('sort') || 'score';
+    const order = url.searchParams.get('order') || 'asc';
     
     // Define valid sort options
-    const validSorts = ['name', 'createdAt'];
+    const validSorts = ['name', 'createdAt', 'score'];
     const validOrders = ['asc', 'desc'];
     
-    const sortBy = validSorts.includes(sort) ? sort : 'createdAt';
-    const sortOrder = validOrders.includes(order) ? order : 'desc';
+    const sortBy = validSorts.includes(sort) ? sort : 'score';
+    const sortOrder = validOrders.includes(order) ? order : 'asc';
     
     const golfers = await prisma.golfer.findMany({
-      orderBy: { [sortBy]: sortOrder }
+      include: {
+        foursomesAsPlayer1: true,
+        foursomesAsPlayer2: true,
+        foursomesAsPlayer3: true,
+        foursomesAsPlayer4: true,
+      },
+      orderBy: sortBy !== 'score' ? { [sortBy]: sortOrder } : { createdAt: 'desc' }
     });
+
+    // Calculate total scores for each golfer
+    const golfersWithScores = golfers.map(golfer => {
+      const allFoursomes = [
+        ...golfer.foursomesAsPlayer1,
+        ...golfer.foursomesAsPlayer2,
+        ...golfer.foursomesAsPlayer3,
+        ...golfer.foursomesAsPlayer4,
+      ];
+      
+      const totalScore = allFoursomes.length > 0 
+        ? allFoursomes.reduce((sum, foursome) => sum + foursome.score, 0)
+        : null;
+      
+      return {
+        ...golfer,
+        totalScore,
+        roundsPlayed: allFoursomes.length
+      };
+    });
+
+    // Sort by score if requested (since we can't sort calculated fields in DB)
+    if (sortBy === 'score') {
+      golfersWithScores.sort((a, b) => {
+        // Handle null scores (golfers with no rounds)
+        if (a.totalScore === null && b.totalScore === null) return 0;
+        if (a.totalScore === null) return 1; // Put null scores at the end
+        if (b.totalScore === null) return -1; // Put null scores at the end
+        
+        // Sort by score (ascending = best score first, descending = worst score first)
+        const scoreComparison = sortOrder === 'asc' 
+          ? a.totalScore - b.totalScore 
+          : b.totalScore - a.totalScore;
+        
+        return scoreComparison;
+      });
+    }
     
-    return { user, golfers, currentSort: sortBy, currentOrder: sortOrder };
+    return { user, golfers: golfersWithScores, currentSort: sortBy, currentOrder: sortOrder };
   } catch (response) {
     throw response;
   }
@@ -164,6 +208,12 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
               >
                 Date Added {getSortIcon('createdAt')}
               </Link>
+              <Link 
+                to={getSortUrl('score')}
+                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+              >
+                Score {getSortIcon('score')}
+              </Link>
             </div>
           )}
         </div>
@@ -229,7 +279,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
                             size="sm"
                             variant="secondary"
                           >
-                            Edit
+                            <Pencil size={16} />
                           </Button>
                         </Link>
                         
@@ -260,12 +310,36 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
                                 Deleting...
                               </div>
                             ) : (
-                              'Delete'
+                              <Trash2 size={16} />
                             )}
                           </Button>
                         </form>
                       </div>
                     )}
+                  </div>
+                  
+                  {/* Tournament Score Section */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700">Tournament Score</h4>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {golfer.totalScore !== null 
+                            ? `${golfer.roundsPlayed} round${golfer.roundsPlayed !== 1 ? 's' : ''} played`
+                            : 'No rounds played'
+                          }
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {golfer.totalScore !== null ? (
+                            <span>{golfer.totalScore > 0 ? '+' : ''}{golfer.totalScore}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { Pencil, Trash2 } from 'lucide-react';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent, Button, Spinner } from '../components/ui';
@@ -231,7 +232,7 @@ export default function Champions({ loaderData, actionData }: Route.ComponentPro
                                 variant="secondary"
                                 size="sm"
                               >
-                                Edit
+                                <Pencil size={16} />
                               </Button>
                             </Link>
                             
@@ -262,7 +263,7 @@ export default function Champions({ loaderData, actionData }: Route.ComponentPro
                                   Deleting...
                                 </div>
                               ) : (
-                                'Delete'
+                                <Trash2 size={16} />
                               )}
                             </Button>
                           </form>

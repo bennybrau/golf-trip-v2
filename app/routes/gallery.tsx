@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
+import { Pencil, Trash2 } from 'lucide-react';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent, Button, Input, Spinner, Pagination } from '../components/ui';
@@ -565,7 +566,7 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
                           setShowEditCustomCategory(false);
                         }}
                       >
-                        ✎
+                        <Pencil size={16} />
                       </Button>
                       
                       {/* Delete button */}
@@ -595,7 +596,7 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
                           {deletingPhotoId === photo.id ? (
                             <Spinner size="sm" className="border-white border-t-red-200" />
                           ) : (
-                            '×'
+                            <Trash2 size={16} />
                           )}
                         </Button>
                       </form>
