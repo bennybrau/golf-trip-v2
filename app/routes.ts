@@ -6,7 +6,13 @@ export default [
   route("account", "routes/account.tsx"),
   route("logout", "routes/logout.tsx"),
   route("golfers", "routes/golfers.tsx"),
+  route("golfers/new", "routes/golfers.new.tsx"),
+  route("golfers/:id/edit", "routes/golfers.$id.edit.tsx"),
   route("foursomes", "routes/foursomes.tsx"),
+  route("foursomes/new", "routes/foursomes.new.tsx"),
+  route("foursomes/:id/edit", "routes/foursomes.$id.edit.tsx"),
   route("gallery", "routes/gallery.tsx"),
   route("champions", "routes/champions.tsx"),
+  route("champions/new", "routes/champions.new.tsx"),
+  route("champions/:id/edit", "routes/champions.$id.edit.tsx"),
 ] satisfies RouteConfig;
