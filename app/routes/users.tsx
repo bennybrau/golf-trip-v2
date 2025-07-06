@@ -186,61 +186,63 @@ export default function Users({ loaderData, actionData }: { loaderData: any, act
                         </div>
                       </div>
                       
-                      {/* Delete Button (Admin Only, not for current user) */}
-                      {userItem.id !== user.id && (
-                        <form 
-                          method="post" 
-                          className="inline ml-4"
-                          onSubmit={(e) => {
-                            if (!confirm(`Are you sure you want to delete ${userItem.name}? This action cannot be undone.`)) {
-                              e.preventDefault();
-                              return false;
-                            }
-                            setDeletingUserId(userItem.id);
-                            return true;
-                          }}
-                        >
-                          <input type="hidden" name="_action" value="delete-user" />
-                          <input type="hidden" name="userId" value={userItem.id} />
-                          <Button
-                            type="submit"
-                            variant="danger"
-                            size="sm"
-                            disabled={deletingUserId === userItem.id}
-                          >
-                            {deletingUserId === userItem.id ? (
-                              <div className="flex items-center gap-1">
-                                <Spinner size="sm" />
-                                Deleting...
-                              </div>
-                            ) : (
-                              'Delete'
-                            )}
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 ml-4">
+                        <Link to={`/users/${userItem.id}/edit`}>
+                          <Button size="sm" variant="secondary">
+                            Edit
                           </Button>
-                        </form>
-                      )}
+                        </Link>
+                        
+                        {/* Delete Button (Admin Only, not for current user) */}
+                        {userItem.id !== user.id && (
+                          <form 
+                            method="post" 
+                            className="inline"
+                            onSubmit={(e) => {
+                              if (!confirm(`Are you sure you want to delete ${userItem.name}? This action cannot be undone.`)) {
+                                e.preventDefault();
+                                return false;
+                              }
+                              setDeletingUserId(userItem.id);
+                              return true;
+                            }}
+                          >
+                            <input type="hidden" name="_action" value="delete-user" />
+                            <input type="hidden" name="userId" value={userItem.id} />
+                            <Button
+                              type="submit"
+                              variant="danger"
+                              size="sm"
+                              disabled={deletingUserId === userItem.id}
+                            >
+                              {deletingUserId === userItem.id ? (
+                                <div className="flex items-center gap-1">
+                                  <Spinner size="sm" />
+                                  Deleting...
+                                </div>
+                              ) : (
+                                'Delete'
+                              )}
+                            </Button>
+                          </form>
+                        )}
+                      </div>
                     </div>
                     {/* Golfer Association Status */}
                     <div className="mt-3 pt-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-700">Golfer Association</h4>
-                          {userItem.golfer ? (
-                            <p className="text-sm text-green-600">
-                              ✓ Associated with golfer: {userItem.golfer.name}
-                              {userItem.golfer.cabin && ` (Cabin ${userItem.golfer.cabin})`}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-orange-600">
-                              ⚠ No associated golfer found
-                            </p>
-                          )}
-                        </div>
-                        <Link to={`/users/${userItem.id}/edit`}>
-                          <Button size="sm" variant="secondary">
-                            Manage
-                          </Button>
-                        </Link>
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700">Golfer Association</h4>
+                        {userItem.golfer ? (
+                          <p className="text-sm text-green-600">
+                            ✓ Associated with golfer: {userItem.golfer.name}
+                            {userItem.golfer.cabin && ` (Cabin ${userItem.golfer.cabin})`}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-orange-600">
+                            ⚠ No associated golfer found
+                          </p>
+                        )}
                       </div>
                     </div>
                 </CardContent>
