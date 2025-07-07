@@ -16,6 +16,7 @@ export default [
   route("foursomes/new", "routes/foursomes.new.tsx"),
   route("foursomes/:id/edit", "routes/foursomes.$id.edit.tsx"),
   route("gallery", "routes/gallery.tsx"),
+  route("gallery/edit/:photoId", "routes/gallery.edit.$photoId.tsx"),
   route("champions", "routes/champions.tsx"),
   route("champions/new", "routes/champions.new.tsx"),
   route("champions/:id/edit", "routes/champions.$id.edit.tsx"),

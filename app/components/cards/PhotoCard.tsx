@@ -1,4 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react';
+import { Link } from 'react-router';
 import { Card, CardContent, Button, Spinner } from '../ui';
 
 interface PhotoCardProps {
@@ -16,8 +17,6 @@ interface PhotoCardProps {
   };
   deletingPhotoId: string | null;
   setSelectedPhoto: (photo: any) => void;
-  setEditingPhoto: (photo: any) => void;
-  setShowEditCustomCategory: (show: boolean) => void;
   setDeletingPhotoId: (id: string | null) => void;
 }
 
@@ -26,8 +25,6 @@ export function PhotoCard({
   user,
   deletingPhotoId,
   setSelectedPhoto,
-  setEditingPhoto,
-  setShowEditCustomCategory,
   setDeletingPhotoId
 }: PhotoCardProps) {
   return (
@@ -52,19 +49,19 @@ export function PhotoCard({
         {user.isAdmin && (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
             {/* Edit button */}
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              className="bg-green-500 hover:bg-green-600 text-white border border-white shadow-md"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingPhoto(photo);
-                setShowEditCustomCategory(false);
-              }}
+            <Link
+              to={`/gallery/edit/${photo.id}`}
+              onClick={(e) => e.stopPropagation()}
             >
-              <Pencil size={16} />
-            </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="bg-green-500 hover:bg-green-600 text-white border border-white shadow-md"
+              >
+                <Pencil size={16} />
+              </Button>
+            </Link>
             
             {/* Delete button */}
             <form 
