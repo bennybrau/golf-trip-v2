@@ -20,6 +20,7 @@
     "@react-router/node": "^7.5.3",
     "@react-router/serve": "^7.5.3",
     "@types/bcryptjs": "^2.4.6",
+    "@vercel/analytics": "^1.5.0",
     "bcryptjs": "^3.0.2",
     "isbot": "^5.1.27",
     "lucide-react": "^0.525.0",
