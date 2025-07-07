@@ -36,21 +36,20 @@ export function WeatherCard({ weather, error }: WeatherCardProps) {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-medium text-cyan-600 mb-1">
-              <a 
-                href="https://swanlakeresort.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
+    <a 
+      href="https://swanlakeresort.com" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="block"
+    >
+      <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200 hover:shadow-lg transition-shadow cursor-pointer">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-cyan-600 mb-1 hover:underline">
                 Swan Lake Resort
-              </a>
-            </h3>
-            <p className="text-xs text-cyan-500 mb-2">Plymouth, IN</p>
+              </h3>
+              <p className="text-xs text-cyan-500 mb-2">Plymouth, IN</p>
             {error ? (
               <div className="text-sm text-red-600">
                 Unable to load weather
@@ -80,5 +79,6 @@ export function WeatherCard({ weather, error }: WeatherCardProps) {
         </div>
       </CardContent>
     </Card>
+    </a>
   );
 }
