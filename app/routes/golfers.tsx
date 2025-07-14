@@ -19,10 +19,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
     
-    // Get sort parameter from URL
+    // Get parameters from URL
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort') || 'score';
     const order = url.searchParams.get('order') || 'asc';
+    const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     
     // Define valid sort options
     const validSorts = ['name', 'createdAt', 'score'];
@@ -30,13 +31,22 @@ export async function loader({ request }: Route.LoaderArgs) {
     
     const sortBy = validSorts.includes(sort) ? sort : 'score';
     const sortOrder = validOrders.includes(order) ? order : 'asc';
+    const selectedYear = parseInt(year);
     
     const golfers = await prisma.golfer.findMany({
       include: {
-        foursomesAsPlayer1: true,
-        foursomesAsPlayer2: true,
-        foursomesAsPlayer3: true,
-        foursomesAsPlayer4: true,
+        foursomesAsPlayer1: {
+          where: { year: selectedYear }
+        },
+        foursomesAsPlayer2: {
+          where: { year: selectedYear }
+        },
+        foursomesAsPlayer3: {
+          where: { year: selectedYear }
+        },
+        foursomesAsPlayer4: {
+          where: { year: selectedYear }
+        },
       },
       orderBy: sortBy !== 'score' ? { [sortBy]: sortOrder } : { createdAt: 'desc' }
     });
@@ -78,7 +88,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       });
     }
     
-    return { user, golfers: golfersWithScores, currentSort: sortBy, currentOrder: sortOrder };
+    return { user, golfers: golfersWithScores, currentSort: sortBy, currentOrder: sortOrder, selectedYear };
   } catch (response) {
     throw response;
   }
@@ -142,7 +152,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 
 export default function Golfers({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfers, currentSort, currentOrder } = loaderData;
+  const { user, golfers, currentSort, currentOrder, selectedYear } = loaderData;
   const [deletingGolferId, setDeletingGolferId] = useState<string | null>(null);
   
   const getSortUrl = (sortBy: string) => {

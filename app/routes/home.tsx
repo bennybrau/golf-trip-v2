@@ -17,16 +17,33 @@ export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
     
+    // Get year parameter from URL
+    const url = new URL(request.url);
+    const year = url.searchParams.get('year') || new Date().getFullYear().toString();
+    const selectedYear = parseInt(year);
+    
     // Get user with their associated golfer
     const userWithGolfer = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
         golfer: {
           include: {
-            foursomesAsPlayer1: { orderBy: { teeTime: 'asc' } },
-            foursomesAsPlayer2: { orderBy: { teeTime: 'asc' } },
-            foursomesAsPlayer3: { orderBy: { teeTime: 'asc' } },
-            foursomesAsPlayer4: { orderBy: { teeTime: 'asc' } },
+            foursomesAsPlayer1: { 
+              where: { year: selectedYear },
+              orderBy: { teeTime: 'asc' } 
+            },
+            foursomesAsPlayer2: { 
+              where: { year: selectedYear },
+              orderBy: { teeTime: 'asc' } 
+            },
+            foursomesAsPlayer3: { 
+              where: { year: selectedYear },
+              orderBy: { teeTime: 'asc' } 
+            },
+            foursomesAsPlayer4: { 
+              where: { year: selectedYear },
+              orderBy: { teeTime: 'asc' } 
+            },
           }
         }
       }
@@ -63,10 +80,18 @@ export async function loader({ request }: Route.LoaderArgs) {
     // Get tournament leader (golfer with lowest total score)
     const allGolfers = await prisma.golfer.findMany({
       include: {
-        foursomesAsPlayer1: true,
-        foursomesAsPlayer2: true,
-        foursomesAsPlayer3: true,
-        foursomesAsPlayer4: true,
+        foursomesAsPlayer1: {
+          where: { year: selectedYear }
+        },
+        foursomesAsPlayer2: {
+          where: { year: selectedYear }
+        },
+        foursomesAsPlayer3: {
+          where: { year: selectedYear }
+        },
+        foursomesAsPlayer4: {
+          where: { year: selectedYear }
+        },
       }
     });
     
@@ -98,7 +123,8 @@ export async function loader({ request }: Route.LoaderArgs) {
       nextTeeTime,
       tournamentLeader,
       leaderScore,
-      weather
+      weather,
+      selectedYear
     };
   } catch (response) {
     // If authentication fails, the requireAuth function throws a redirect response

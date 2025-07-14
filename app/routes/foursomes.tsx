@@ -19,10 +19,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   try {
     const user = await requireAuth(request);
     
-    // Get sort parameter from URL
+    // Get parameters from URL
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort') || 'teeTime';
     const order = url.searchParams.get('order') || 'asc';
+    const year = url.searchParams.get('year') || new Date().getFullYear().toString();
     
     // Define valid sort options
     const validSorts = ['teeTime', 'score', 'createdAt'];
@@ -30,8 +31,12 @@ export async function loader({ request }: Route.LoaderArgs) {
     
     const sortBy = validSorts.includes(sort) ? sort : 'teeTime';
     const sortOrder = validOrders.includes(order) ? order : 'asc';
+    const selectedYear = parseInt(year);
     
     const foursomes = await prisma.foursome.findMany({
+      where: {
+        year: selectedYear
+      },
       include: {
         golfer1: true,
         golfer2: true,
@@ -41,7 +46,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       orderBy: { [sortBy]: sortOrder }
     });
     
-    return { user, foursomes, currentSort: sortBy, currentOrder: sortOrder };
+    return { user, foursomes, currentSort: sortBy, currentOrder: sortOrder, selectedYear };
   } catch (response) {
     throw response;
   }
@@ -95,7 +100,7 @@ const roundLabels = {
 
 
 export default function Foursomes({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, foursomes, currentSort, currentOrder } = loaderData;
+  const { user, foursomes, currentSort, currentOrder, selectedYear } = loaderData;
   const [deletingFoursomeId, setDeletingFoursomeId] = useState<string | null>(null);
   
   const getSortUrl = (sortBy: string) => {

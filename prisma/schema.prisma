@@ -53,6 +53,7 @@ model Foursome {
   id        String   @id @default(cuid())
   round     Round
   score     Int      @default(0)
+  year      Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   golfer1Id String?

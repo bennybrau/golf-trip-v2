@@ -104,6 +104,7 @@ export async function action({ request }: Route.ActionArgs) {
         golfer3Id: validatedData.golfer3Id || null,
         golfer4Id: validatedData.golfer4Id || null,
         score: scoreValue,
+        year: new Date().getFullYear(),
       }
     });
     
