@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Pencil, Trash2 } from 'lucide-react';
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Spinner } from '../components/ui';
+import { Card, CardContent, Button, Spinner, Image } from '../components/ui';
 import { prisma } from '../lib/db';
 import { cloudflareImages } from '../lib/cloudflare';
 import type { Route } from './+types/champions';
@@ -136,14 +136,11 @@ export default function Champions({ loaderData, actionData }: Route.ComponentPro
                     {/* Champion Photo */}
                     <div className="flex-shrink-0">
                       {champion.photoUrl ? (
-                        <img
+                        <Image
                           src={champion.photoUrl}
                           alt={`${champion.displayName || champion.golfer.name} - ${champion.year} Champion`}
+                          fallbackIcon="image"
                           className="w-48 h-48 object-cover rounded-lg border border-gray-300"
-                          onError={(e) => {
-                            // Fallback for broken images
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIFBob3RvPC90ZXh0Pjwvc3ZnPg==';
-                          }}
                         />
                       ) : (
                         <div className="w-48 h-48 bg-gray-200 rounded-lg border border-gray-300 flex items-center justify-center">

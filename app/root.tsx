@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useNavigation,
 } from "react-router";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -44,7 +45,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const navigation = useNavigation();
+  const isLoading = navigation.state === "loading";
+
+  return (
+    <>
+      {isLoading && (
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <div className="h-1 bg-gray-200">
+            <div className="h-full bg-green-600 animate-pulse transition-all duration-300 ease-in-out" 
+                 style={{ width: '100%' }} />
+          </div>
+        </div>
+      )}
+      <Outlet />
+    </>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

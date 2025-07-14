@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Image } from './ui';
 
 interface Photo {
   id: string;
@@ -109,9 +110,10 @@ export function PhotoModal({ selectedPhoto, photos, onClose, onSelectPhoto }: Ph
 
       {/* Image container */}
       <div className="max-w-4xl max-h-full relative">
-        <img
+        <Image
           src={selectedPhoto.url}
           alt={selectedPhoto.caption || 'Golf trip photo'}
+          fallbackIcon="camera"
           className="max-w-full max-h-full object-contain"
           onClick={(e) => e.stopPropagation()}
         />

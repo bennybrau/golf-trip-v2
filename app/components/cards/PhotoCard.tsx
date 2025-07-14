@@ -1,6 +1,6 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
-import { Card, CardContent, Button, Spinner } from '../ui';
+import { Card, CardContent, Button, Spinner, Image } from '../ui';
 
 interface PhotoCardProps {
   photo: {
@@ -34,14 +34,11 @@ export function PhotoCard({
           className="aspect-square cursor-pointer"
           onClick={() => setSelectedPhoto(photo)}
         >
-          <img
+          <Image
             src={photo.url}
             alt={photo.caption || 'Golf trip photo'}
+            fallbackIcon="camera"
             className="w-full h-full object-cover"
-            onError={(e) => {
-              // Fallback for broken images
-              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
-            }}
           />
         </div>
         

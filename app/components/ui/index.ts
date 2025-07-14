@@ -6,3 +6,4 @@ export { Avatar } from './Avatar';
 export { Logo } from './Logo';
 export { Spinner } from './Spinner';
 export { Pagination } from './Pagination';
+export { Image } from './Image';

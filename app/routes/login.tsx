@@ -1,8 +1,8 @@
-import { Form, redirect, useActionData, Link } from 'react-router';
+import { Form, redirect, useActionData, useNavigation, Link } from 'react-router';
 import { authenticateUser, createSession } from '../lib/auth';
 import { createSessionCookie, getSessionToken } from '../lib/session';
 import { loginSchema } from '../lib/validation';
-import { Button, Input, Card, CardContent, Alert, Logo } from '../components/ui';
+import { Button, Input, Card, CardContent, Alert, Logo, Spinner } from '../components/ui';
 import type { Route } from './+types/login';
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -56,6 +56,8 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Login() {
   const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === 'submitting';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
@@ -96,8 +98,15 @@ export default function Login() {
                 </Alert>
               )}
 
-              <Button type="submit" fullWidth>
-                Sign In
+              <Button type="submit" fullWidth disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <Spinner size="sm" className="border-t-white" />
+                    Signing In...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </Form>
 
