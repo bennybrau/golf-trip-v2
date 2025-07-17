@@ -19,7 +19,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     
     // Get year parameter from URL
     const url = new URL(request.url);
-    const year = url.searchParams.get('year') || new Date().getFullYear().toString();
+    const year = url.searchParams.get('year') || '2024';
     const selectedYear = parseInt(year);
     
     // Get user with their associated golfer

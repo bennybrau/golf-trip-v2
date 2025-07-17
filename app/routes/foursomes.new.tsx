@@ -18,6 +18,7 @@ const FoursomeSchema = z.object({
   round: z.enum(['FRIDAY_MORNING', 'FRIDAY_AFTERNOON', 'SATURDAY_MORNING', 'SATURDAY_AFTERNOON']),
   course: z.enum(['BLACK', 'SILVER']),
   teeTime: z.string().min(1, "Tee time is required"),
+  year: z.string().min(1, "Year is required"),
   golfer1Id: z.string().optional(),
   golfer2Id: z.string().optional(),
   golfer3Id: z.string().optional(),
@@ -45,11 +46,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort');
     const order = url.searchParams.get('order');
+    const year = url.searchParams.get('year') || '2024';
     
     if (!user.isAdmin) {
       const params = new URLSearchParams();
       if (sort) params.set('sort', sort);
       if (order) params.set('order', order);
+      if (year !== '2024') params.set('year', year);
       const queryString = params.toString();
       throw redirect(queryString ? `/foursomes?${queryString}` : '/foursomes');
     }
@@ -59,7 +62,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       orderBy: { name: 'asc' }
     });
     
-    return { user, golfers, sort, order };
+    return { user, golfers, sort, order, year };
   } catch (response) {
     throw response;
   }
@@ -82,6 +85,7 @@ export async function action({ request }: Route.ActionArgs) {
     round: formData.get('round') as string,
     course: formData.get('course') as string,
     teeTime: formData.get('teeTime') as string,
+    year: formData.get('year') as string,
     golfer1Id: formData.get('golfer1Id') as string || undefined,
     golfer2Id: formData.get('golfer2Id') as string || undefined,
     golfer3Id: formData.get('golfer3Id') as string || undefined,
@@ -104,7 +108,7 @@ export async function action({ request }: Route.ActionArgs) {
         golfer3Id: validatedData.golfer3Id || null,
         golfer4Id: validatedData.golfer4Id || null,
         score: scoreValue,
-        year: new Date().getFullYear(),
+        year: parseInt(validatedData.year),
       }
     });
     
@@ -112,6 +116,7 @@ export async function action({ request }: Route.ActionArgs) {
     const params = new URLSearchParams();
     if (sort) params.set('sort', sort);
     if (order) params.set('order', order);
+    if (validatedData.year !== '2024') params.set('year', validatedData.year);
     const queryString = params.toString();
     
     return redirect(queryString ? `/foursomes?${queryString}` : '/foursomes');
@@ -124,7 +129,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function NewFoursome({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfers = [], sort, order } = loaderData;
+  const { user, golfers = [], sort, order, year } = loaderData;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Generate URL with current search parameters
@@ -132,6 +137,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
     const params = new URLSearchParams();
     if (sort) params.set('sort', sort);
     if (order) params.set('order', order);
+    if (year !== '2024') params.set('year', year);
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
@@ -181,7 +187,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
           
           <CardContent className="p-6">
             <form method="post" className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label htmlFor="round" className="block text-sm font-medium text-gray-700 mb-2">
                     Round *
@@ -212,6 +218,23 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     <option value="">Select a course</option>
                     <option value="BLACK">Black</option>
                     <option value="SILVER">Silver</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">
+                    Year *
+                  </label>
+                  <select 
+                    id="year"
+                    name="year" 
+                    required
+                    defaultValue={year}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
                   </select>
                 </div>
               </div>

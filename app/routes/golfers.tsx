@@ -23,7 +23,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort') || 'score';
     const order = url.searchParams.get('order') || 'asc';
-    const year = url.searchParams.get('year') || new Date().getFullYear().toString();
+    const year = url.searchParams.get('year') || '2024';
     
     // Define valid sort options
     const validSorts = ['name', 'createdAt', 'score'];
@@ -157,7 +157,11 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
   
   const getSortUrl = (sortBy: string) => {
     const newOrder = currentSort === sortBy && currentOrder === 'asc' ? 'desc' : 'asc';
-    return `/golfers?sort=${sortBy}&order=${newOrder}`;
+    const params = new URLSearchParams();
+    params.set('sort', sortBy);
+    params.set('order', newOrder);
+    if (selectedYear !== 2024) params.set('year', selectedYear.toString());
+    return `/golfers?${params.toString()}`;
   };
   
   const getSortIcon = (sortBy: string) => {
@@ -170,8 +174,9 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
   // Generate URL with current search parameters
   const getUrlWithCurrentParams = (basePath: string) => {
     const params = new URLSearchParams();
-    if (currentSort !== 'createdAt') params.set('sort', currentSort);
-    if (currentOrder !== 'desc') params.set('order', currentOrder);
+    if (currentSort !== 'score') params.set('sort', currentSort);
+    if (currentOrder !== 'asc') params.set('order', currentOrder);
+    if (selectedYear !== 2024) params.set('year', selectedYear.toString());
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
@@ -202,30 +207,54 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
             )}
           </div>
           
-          {/* Sort Controls */}
-          {golfers.length > 0 && (
-            <div className="mt-4 flex gap-2 items-center">
-              <span className="text-sm text-gray-600">Sort by:</span>
-              <Link 
-                to={getSortUrl('name')}
-                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+          {/* Year and Sort Controls */}
+          <div className="mt-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            {/* Year Selector */}
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-gray-600">Year:</span>
+              <select 
+                value={selectedYear}
+                onChange={(e) => {
+                  const newYear = e.target.value;
+                  const params = new URLSearchParams();
+                  params.set('year', newYear);
+                  if (currentSort !== 'score') params.set('sort', currentSort);
+                  if (currentOrder !== 'asc') params.set('order', currentOrder);
+                  window.location.href = `/golfers?${params.toString()}`;
+                }}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                Name {getSortIcon('name')}
-              </Link>
-              <Link 
-                to={getSortUrl('createdAt')}
-                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
-              >
-                Date Added {getSortIcon('createdAt')}
-              </Link>
-              <Link 
-                to={getSortUrl('score')}
-                className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
-              >
-                Score {getSortIcon('score')}
-              </Link>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+              </select>
             </div>
-          )}
+            
+            {/* Sort Controls */}
+            {golfers.length > 0 && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-gray-600">Sort by:</span>
+                <Link 
+                  to={getSortUrl('name')}
+                  className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+                >
+                  Name {getSortIcon('name')}
+                </Link>
+                <Link 
+                  to={getSortUrl('createdAt')}
+                  className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+                >
+                  Date Added {getSortIcon('createdAt')}
+                </Link>
+                <Link 
+                  to={getSortUrl('score')}
+                  className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+                >
+                  Score {getSortIcon('score')}
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
 

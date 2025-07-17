@@ -1,6 +1,6 @@
 # Database Migration Scripts
 
-This directory contains scripts to help migrate data between your local development database and production Neon database.
+This directory contains scripts to help migrate data between your local development database and production Neon database, as well as import data from external sources.
 
 ## Scripts Overview
 
@@ -54,6 +54,37 @@ node scripts/restore-from-backup.js backups/backup-2024-01-01.json local
 - Imports backup data
 - Verifies restoration
 - Includes confirmation prompt for safety
+
+### 4. `import-golfers.mjs`
+Import golfers from a CSV file into the database.
+
+**Usage:**
+```bash
+node scripts/import-golfers.mjs <path-to-csv-file>
+
+# Example with sample file
+node scripts/import-golfers.mjs scripts/sample-golfers.csv
+```
+
+**CSV Format:**
+```csv
+name,email,phone,cabin
+John Doe,john.doe@example.com,555-0123,1
+Jane Smith,jane.smith@example.com,555-0456,2
+```
+
+**What it does:**
+- Reads golfer data from CSV file
+- Validates required fields (name is required)
+- Checks for existing golfers to avoid duplicates  
+- Imports new golfers to database
+- Provides detailed import summary
+
+**Features:**
+- ✅ Validates CSV format and required fields
+- ✅ Handles missing optional fields gracefully
+- ✅ Prevents duplicate imports
+- ✅ Shows detailed progress and summary
 
 ## Recommended Workflow
 
@@ -133,6 +164,8 @@ scripts/
 ├── migrate-to-production.js     # Direct migration script
 ├── backup-local-data.js         # Backup creation script
 ├── restore-from-backup.js       # Restore from backup script
+├── import-golfers.mjs           # Import golfers from CSV
+├── sample-golfers.csv           # Example CSV format
 └── backups/                     # Created automatically for backups
     ├── backup-2024-01-01.json
     └── ...
