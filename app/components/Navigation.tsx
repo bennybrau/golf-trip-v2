@@ -101,6 +101,12 @@ export function Navigation({ user }: NavigationProps) {
                   >
                     Account Settings
                   </Link>
+                  <Link
+                    to="/install"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    📱 Install App
+                  </Link>
                   <Form method="post" action="/logout">
                     <button
                       type="submit"
@@ -214,6 +220,14 @@ export function Navigation({ user }: NavigationProps) {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Account Settings
+                </Link>
+                
+                <Link
+                  to="/install"
+                  className="block px-3 py-2 text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-md text-base font-medium transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  📱 Install App
                 </Link>
                 
                 <Form method="post" action="/logout">

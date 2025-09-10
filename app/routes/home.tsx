@@ -2,6 +2,7 @@ import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui';
 import { ScoreCard, CabinCard, LeaderCard, TeeTimeCard, WeatherCard } from '../components/dashboard';
+import { InstallPrompt } from '../components/InstallPrompt';
 import { prisma } from '../lib/db';
 import { getWeatherForPlymouth } from '../lib/weather';
 import type { Route } from './+types/home';
@@ -140,6 +141,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <Navigation user={user} />
       
       <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <InstallPrompt />
+        
         <div className="mb-8 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
