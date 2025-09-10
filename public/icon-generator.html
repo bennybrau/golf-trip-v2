@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Converter</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .icon-container { margin: 20px 0; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        .download-link { display: block; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>GT Icon Generator</h1>
+    <p>Right-click each canvas and "Save image as..." to get PNG files.</p>
+    
+    <div class="icon-container">
+        <h3>Apple Touch Icon (180x180)</h3>
+        <canvas id="canvas180" width="180" height="180"></canvas>
+        <button onclick="downloadCanvas('canvas180', 'apple-touch-icon.png')">Download PNG</button>
+    </div>
+    
+    <div class="icon-container">
+        <h3>Icon 192x192</h3>
+        <canvas id="canvas192" width="192" height="192"></canvas>
+        <button onclick="downloadCanvas('canvas192', 'icon-192.png')">Download PNG</button>
+    </div>
+    
+    <div class="icon-container">
+        <h3>Icon 512x512</h3>
+        <canvas id="canvas512" width="512" height="512"></canvas>
+        <button onclick="downloadCanvas('canvas512', 'icon-512.png')">Download PNG</button>
+    </div>
+
+    <script>
+        function createIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Fill background with green
+            ctx.fillStyle = '#16a34a';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add rounded corners effect (simplified)
+            ctx.fillStyle = '#16a34a';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.35}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('GT', size / 2, size / 2);
+        }
+        
+        function downloadCanvas(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Create all icons when page loads
+        createIcon('canvas180', 180);
+        createIcon('canvas192', 192);
+        createIcon('canvas512', 512);
+    </script>
+</body>
+</html>
