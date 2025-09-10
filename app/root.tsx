@@ -24,7 +24,9 @@ export const links: Route.LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
   { rel: "manifest", href: "/manifest.json" },
-  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+  { rel: "icon", href: "/icon-192.png", sizes: "192x192", type: "image/png" },
+  { rel: "icon", href: "/icon-512.png", sizes: "512x512", type: "image/png" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
