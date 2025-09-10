@@ -82,7 +82,7 @@ self.addEventListener('fetch', (event) => {
 
             return response;
           })
-          .catch(() => {
+          .catch((error) => {
             // If network fails, try to serve a fallback for navigation requests
             if (event.request.mode === 'navigate') {
               return caches.match('/');

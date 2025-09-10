@@ -7,90 +7,81 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export function InstallPrompt() {
+export function InstallPromptSimple() {
+  const [mounted, setMounted] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [deviceType, setDeviceType] = useState<'ios' | 'android' | 'desktop' | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [deviceType, setDeviceType] = useState<string>('');
 
   useEffect(() => {
-    // Mark as client-side
-    setIsClient(true);
+    setMounted(true);
+  }, []);
 
-    // Only run browser APIs on client side
-    if (typeof window === 'undefined') return;
+  useEffect(() => {
+    if (!mounted) return;
 
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || 
-        (window.navigator as any).standalone === true) {
-      setIsInstalled(true);
-      return;
-    }
+    // Check if already running as PWA
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        (window.navigator as any).standalone === true;
+    
+    if (isStandalone) return;
 
-    // Check if dismissed this session
-    if (sessionStorage.getItem('installPromptDismissed') === 'true') {
-      return;
+    // Check if already dismissed
+    try {
+      if (sessionStorage.getItem('installPromptDismissed') === 'true') return;
+    } catch {
+      // Ignore sessionStorage errors
     }
 
     // Detect device type
     const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
-    
-    if (isIOS) {
+    if (/iphone|ipad|ipod/.test(userAgent)) {
       setDeviceType('ios');
-      // Show iOS instructions after a delay
-      const timer = setTimeout(() => setShowPrompt(true), 3000);
+      // Show iOS prompt after delay
+      const timer = setTimeout(() => setShowPrompt(true), 5000);
       return () => clearTimeout(timer);
-    } else if (isAndroid) {
+    } else if (/android/.test(userAgent)) {
       setDeviceType('android');
     } else {
       setDeviceType('desktop');
     }
 
-    // Handle PWA install prompt for Android/Desktop
-    const handleBeforeInstallPrompt = (e: Event) => {
+    // Listen for install prompt
+    const handleInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowPrompt(true);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+  }, [mounted]);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
+    if (!deferredPrompt) return;
+    
+    try {
+      await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setShowPrompt(false);
       }
-      setDeferredPrompt(null);
+    } catch (error) {
+      console.warn('Install prompt failed:', error);
     }
+    setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    // Don't show again for this session
-    if (typeof window !== 'undefined') {
+    try {
       sessionStorage.setItem('installPromptDismissed', 'true');
+    } catch {
+      // Ignore sessionStorage errors
     }
   };
 
-  // Don't render anything on server side
-  if (!isClient) {
-    return null;
-  }
-
-  // Don't show if already installed or dismissed
-  if (isInstalled || !showPrompt || !deviceType) {
-    return null;
-  }
+  if (!mounted || !showPrompt) return null;
 
   return (
     <Card className="mb-6 border-green-200 bg-green-50">
@@ -99,34 +90,29 @@ export function InstallPrompt() {
           <div className="flex-shrink-0 text-2xl">📱</div>
           <div className="flex-1">
             <h3 className="font-semibold text-green-900 mb-2">
-              Add to Home Screen
+              Add Golf Trip to Home Screen
             </h3>
             
             {deviceType === 'ios' && (
               <div className="text-sm text-green-800 space-y-2">
                 <p>Get quick access to Golf Trip:</p>
                 <ol className="list-decimal list-inside space-y-1 pl-2">
-                  <li>Tap the Share button <span className="inline-block w-4 h-4 text-blue-600">📤</span> at the bottom of Safari</li>
+                  <li>Tap the Share button <span className="inline-block w-4 h-4 text-blue-600">📤</span> in Safari</li>
                   <li>Scroll down and tap "Add to Home Screen"</li>
                   <li>Tap "Add" to confirm</li>
                 </ol>
               </div>
             )}
             
-            {(deviceType === 'android' || deviceType === 'desktop') && deferredPrompt && (
-              <div className="text-sm text-green-800 space-y-2">
-                <p>Install Golf Trip as an app for quick access and offline use.</p>
+            {deviceType === 'android' && (
+              <div className="text-sm text-green-800">
+                <p>Install Golf Trip as an app for quick access.</p>
               </div>
             )}
             
-            {deviceType === 'android' && !deferredPrompt && (
-              <div className="text-sm text-green-800 space-y-2">
-                <p>Add Golf Trip to your home screen:</p>
-                <ol className="list-decimal list-inside space-y-1 pl-2">
-                  <li>Tap the menu (⋮) in Chrome</li>
-                  <li>Select "Add to Home screen"</li>
-                  <li>Tap "Add" to confirm</li>
-                </ol>
+            {deviceType === 'desktop' && (
+              <div className="text-sm text-green-800">
+                <p>Install Golf Trip for quick desktop access.</p>
               </div>
             )}
           </div>
