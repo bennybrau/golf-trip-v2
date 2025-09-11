@@ -211,7 +211,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
           <div className="mt-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             {/* Year Selector */}
             <div className="flex gap-2 items-center">
-              <span className="text-sm text-gray-600">Year:</span>
+              <span className="text-sm text-gray-800 font-medium">Year:</span>
               <select 
                 value={selectedYear}
                 onChange={(e) => {
@@ -222,7 +222,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
                   if (currentOrder !== 'asc') params.set('order', currentOrder);
                   window.location.href = `/golfers?${params.toString()}`;
                 }}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
@@ -233,22 +233,22 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
             {/* Sort Controls */}
             {golfers.length > 0 && (
               <div className="flex gap-2 items-center">
-                <span className="text-sm text-gray-600">Sort by:</span>
+                <span className="text-sm text-gray-800 font-medium">Sort by:</span>
                 <Link 
                   to={getSortUrl('name')}
-                  className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
                 >
                   Name {getSortIcon('name')}
                 </Link>
                 <Link 
                   to={getSortUrl('createdAt')}
-                  className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
                 >
                   Date Added {getSortIcon('createdAt')}
                 </Link>
                 <Link 
                   to={getSortUrl('score')}
-                  className="text-sm px-3 py-1 rounded-md border hover:bg-gray-50 flex items-center gap-1"
+                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
                 >
                   Score {getSortIcon('score')}
                 </Link>
