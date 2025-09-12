@@ -1,7 +1,7 @@
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui';
-import { ScoreCard, CabinCard, LeaderCard, TeeTimeCard, WeatherCard } from '../components/dashboard';
+import { ScoreCard, CabinCard, LeaderCard, TeeTimeCard, WeatherCard, WeekendMenuCard } from '../components/dashboard';
 import { InstallPromptSimple } from '../components/InstallPromptSimple';
 import { prisma } from '../lib/db';
 import { getWeatherForPlymouth } from '../lib/weather';
@@ -157,11 +157,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <ScoreCard totalScore={totalScore} golfer={golfer} />
           <CabinCard golfer={golfer} />
           <LeaderCard tournamentLeader={tournamentLeader} leaderScore={leaderScore} />
           <TeeTimeCard nextTeeTime={nextTeeTime} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <WeekendMenuCard />
         </div>
 
         {/* Additional Info Section */}
