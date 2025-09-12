@@ -23,7 +23,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort') || 'score';
     const order = url.searchParams.get('order') || 'asc';
-    const year = url.searchParams.get('year') || '2024';
+    const year = url.searchParams.get('year') || '2025';
     
     // Define valid sort options
     const validSorts = ['name', 'createdAt', 'score'];
@@ -160,7 +160,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
     const params = new URLSearchParams();
     params.set('sort', sortBy);
     params.set('order', newOrder);
-    if (selectedYear !== 2024) params.set('year', selectedYear.toString());
+    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
     return `/golfers?${params.toString()}`;
   };
   
@@ -176,7 +176,7 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
     const params = new URLSearchParams();
     if (currentSort !== 'score') params.set('sort', currentSort);
     if (currentOrder !== 'asc') params.set('order', currentOrder);
-    if (selectedYear !== 2024) params.set('year', selectedYear.toString());
+    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
