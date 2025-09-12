@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golf-trip-v1';
+const CACHE_NAME = 'golf-trip-3cae45e';
 const STATIC_CACHE_URLS = [
   '/',
   '/manifest.json',
@@ -15,6 +15,8 @@ self.addEventListener('install', (event) => {
         return cache.addAll(STATIC_CACHE_URLS);
       })
       .then(() => {
+        // Skip waiting to activate immediately and notify clients
+        self.postMessage({ type: 'SW_UPDATE_AVAILABLE' });
         return self.skipWaiting();
       })
   );
@@ -39,7 +41,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network-first for app files, cache-first for static assets
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -51,6 +53,39 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-first strategy for HTML and JS files to ensure updates
+  if (event.request.url.match(/\.(html|js)$/) || event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache successful responses
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch((error) => {
+          // If network fails, try cache
+          return caches.match(event.request)
+            .then((response) => {
+              if (response) {
+                return response;
+              }
+              // For navigation requests, serve the root as fallback
+              if (event.request.mode === 'navigate') {
+                return caches.match('/');
+              }
+              throw error;
+            });
+        })
+    );
+    return;
+  }
+
+  // Cache-first strategy for static assets (images, CSS, fonts)
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -73,7 +108,7 @@ self.addEventListener('fetch', (event) => {
             const responseToCache = response.clone();
 
             // Cache successful responses for static assets
-            if (event.request.url.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
+            if (event.request.url.match(/\.(css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
               caches.open(CACHE_NAME)
                 .then((cache) => {
                   cache.put(event.request, responseToCache);
