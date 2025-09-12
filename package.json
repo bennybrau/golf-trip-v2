@@ -13,8 +13,8 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:deploy": "prisma migrate deploy",
-    "import:images": "tsx scripts/import-cloudflare-images.ts",
-    "update-sw": "node scripts/update-sw-cache.js"
+    "update-sw": "node scripts/update-sw-cache.js",
+    "db:sync-to-remote": "node scripts/sync-local-to-remote.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",

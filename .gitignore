@@ -12,3 +12,7 @@
 # Prisma
 /generated/prisma
 .vercel
+
+raw-backups/*
+
+data-exports/*

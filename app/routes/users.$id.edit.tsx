@@ -28,7 +28,6 @@ const UserEditSchema = z.object({
     if (!val) return true;
     return /^[\+]?[1-9][\d]{0,15}$/.test(val.replace(/[\s\-\(\)]/g, ''));
   }, 'Please enter a valid phone number'),
-  newGolferCabin: z.string().optional(),
 });
 
 export async function loader({ request, params }: { request: Request, params: any }) {
@@ -55,7 +54,6 @@ export async function loader({ request, params }: { request: Request, params: an
           select: {
             id: true,
             name: true,
-            cabin: true,
           }
         }
       },
@@ -139,7 +137,6 @@ export async function action({ request, params }: { request: Request, params: an
           name: validatedData.newGolferName,
           email: validatedData.email,
           phone: validatedData.newGolferPhone || null,
-          cabin: validatedData.newGolferCabin && validatedData.newGolferCabin !== '' ? parseInt(validatedData.newGolferCabin) : null,
         },
       });
       
@@ -300,7 +297,6 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                       <h4 className="text-sm font-medium text-green-800 mb-2">Currently Associated Golfer</h4>
                       <p className="text-sm text-green-700">
                         {user.golfer.name}
-                        {user.golfer.cabin && ` (Cabin ${user.golfer.cabin})`}
                       </p>
                     </div>
                   ) : (
@@ -338,13 +334,11 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                             {user.golfer && (
                               <option key={user.golfer.id} value={user.golfer.id}>
                                 {user.golfer.name} (Currently Associated)
-                                {user.golfer.cabin ? ` - Cabin ${user.golfer.cabin}` : ''}
                               </option>
                             )}
                             {golfers.map((golfer: any) => (
                               <option key={golfer.id} value={golfer.id}>
                                 {golfer.name} ({golfer.email || 'No email'})
-                                {golfer.cabin ? ` - Cabin ${golfer.cabin}` : ''}
                               </option>
                             ))}
                           </select>
@@ -397,21 +391,6 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                             </div>
                           </div>
                           
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Cabin (Optional)
-                            </label>
-                            <select 
-                              name="newGolferCabin" 
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                            >
-                              <option value="">Select a cabin</option>
-                              <option value="1">Cabin 1</option>
-                              <option value="2">Cabin 2</option>
-                              <option value="3">Cabin 3</option>
-                              <option value="4">Cabin 4</option>
-                            </select>
-                          </div>
                         </div>
                       )}
                     </div>

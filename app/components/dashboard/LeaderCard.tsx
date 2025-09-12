@@ -19,11 +19,13 @@ export function LeaderCard({ tournamentLeader, leaderScore }: LeaderCardProps) {
             <div className="text-lg font-bold text-yellow-900 truncate">
               {tournamentLeader?.name || 'TBD'}
             </div>
-            <p className="text-xs text-yellow-700 mt-1">
+            <p className="text-xs mt-1">
               {leaderScore !== null ? (
-                <span>{leaderScore > 0 ? '+' : ''}{leaderScore} strokes</span>
+                <span className={leaderScore < 0 ? 'text-blue-600' : 'text-black'}>
+                  {leaderScore > 0 ? '+' : ''}{leaderScore} strokes
+                </span>
               ) : (
-                'No scores yet'
+                <span className="text-yellow-700">No scores yet</span>
               )}
             </p>
           </div>

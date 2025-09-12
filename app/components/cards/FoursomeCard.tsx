@@ -123,8 +123,10 @@ export function FoursomeCard({
                 </form>
               </div>
             )}
-            <div className="text-2xl font-bold text-gray-900">
-              {foursome.score > 0 ? '+' : ''}{foursome.score}
+            <div className="text-2xl font-bold">
+              <span className={foursome.score < 0 ? 'text-blue-600' : 'text-black'}>
+                {foursome.score > 0 ? '+' : ''}{foursome.score}
+              </span>
             </div>
           </div>
         </div>

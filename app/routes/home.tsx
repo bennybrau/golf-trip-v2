@@ -45,6 +45,9 @@ export async function loader({ request }: Route.LoaderArgs) {
               where: { year: selectedYear },
               orderBy: { teeTime: 'asc' } 
             },
+            yearlyStatus: {
+              where: { year: selectedYear }
+            },
           }
         }
       }
@@ -93,13 +96,22 @@ export async function loader({ request }: Route.LoaderArgs) {
         foursomesAsPlayer4: {
           where: { year: selectedYear }
         },
+        yearlyStatus: {
+          where: { year: selectedYear }
+        },
       }
+    });
+
+    // Filter out inactive golfers
+    const activeGolfers = allGolfers.filter(golfer => {
+      const yearStatus = golfer.yearlyStatus[0];
+      return !yearStatus || yearStatus.isActive;
     });
     
     let tournamentLeader = null;
     let leaderScore = null;
     
-    for (const golfer of allGolfers) {
+    for (const golfer of activeGolfers) {
       const golferFoursomes = [
         ...golfer.foursomesAsPlayer1,
         ...golfer.foursomesAsPlayer2,
@@ -117,6 +129,12 @@ export async function loader({ request }: Route.LoaderArgs) {
       }
     }
     
+    // Get cabin from yearly status for current golfer
+    let userCabin = null;
+    if (userWithGolfer?.golfer?.yearlyStatus[0]) {
+      userCabin = userWithGolfer.golfer.yearlyStatus[0].cabin;
+    }
+    
     return { 
       user, 
       golfer: userWithGolfer?.golfer || null, 
@@ -125,7 +143,8 @@ export async function loader({ request }: Route.LoaderArgs) {
       tournamentLeader,
       leaderScore,
       weather,
-      selectedYear
+      selectedYear,
+      userCabin
     };
   } catch (response) {
     // If authentication fails, the requireAuth function throws a redirect response
@@ -134,7 +153,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { user, golfer, totalScore, nextTeeTime, tournamentLeader, leaderScore, weather } = loaderData;
+  const { user, golfer, totalScore, nextTeeTime, tournamentLeader, leaderScore, weather, userCabin } = loaderData;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -159,7 +178,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <ScoreCard totalScore={totalScore} golfer={golfer} />
-          <CabinCard golfer={golfer} />
+          <CabinCard golfer={golfer ? { ...golfer, cabin: userCabin } : null} />
           <LeaderCard tournamentLeader={tournamentLeader} leaderScore={leaderScore} />
           <TeeTimeCard nextTeeTime={nextTeeTime} />
         </div>

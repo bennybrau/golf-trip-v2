@@ -14,14 +14,14 @@ model User {
   avatar    String?
   phone     String?
   password  String
-  golferId  String?    @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   isAdmin   Boolean    @default(false)
-  golfer    Golfer?    @relation(fields: [golferId], references: [id], onDelete: SetNull)
+  golferId  String?    @unique
   champions Champion[]
   photos    Photo[]
   sessions  Session[]
+  golfer    Golfer?    @relation(fields: [golferId], references: [id])
 }
 
 model Session {
@@ -34,26 +34,36 @@ model Session {
 }
 
 model Golfer {
-  id                 String     @id @default(cuid())
-  name               String
+  id                 String         @id @default(cuid())
+  name               String         @unique
   email              String?
   phone              String?
-  cabin              Int?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  user               User?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
   championships      Champion[]
-  foursomesAsPlayer1 Foursome[] @relation("Player1")
-  foursomesAsPlayer2 Foursome[] @relation("Player2")
-  foursomesAsPlayer3 Foursome[] @relation("Player3")
-  foursomesAsPlayer4 Foursome[] @relation("Player4")
+  foursomesAsPlayer1 Foursome[]     @relation("Player1")
+  foursomesAsPlayer2 Foursome[]     @relation("Player2")
+  foursomesAsPlayer3 Foursome[]     @relation("Player3")
+  foursomesAsPlayer4 Foursome[]     @relation("Player4")
+  yearlyStatus       GolferStatus[]
+  user               User?
+}
+
+model GolferStatus {
+  id       String  @id @default(cuid())
+  golferId String
+  year     Int
+  cabin    Int?
+  isActive Boolean @default(true)
+  golfer   Golfer  @relation(fields: [golferId], references: [id], onDelete: Cascade)
+
+  @@unique([golferId, year])
 }
 
 model Foursome {
   id        String   @id @default(cuid())
   round     Round
   score     Int      @default(0)
-  year      Int      @default(2024)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   golfer1Id String?
@@ -62,6 +72,7 @@ model Foursome {
   golfer4Id String?
   teeTime   DateTime
   course    Course
+  year      Int      @default(2024)
   golfer1   Golfer?  @relation("Player1", fields: [golfer1Id], references: [id])
   golfer2   Golfer?  @relation("Player2", fields: [golfer2Id], references: [id])
   golfer3   Golfer?  @relation("Player3", fields: [golfer3Id], references: [id])
