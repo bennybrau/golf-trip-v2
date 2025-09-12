@@ -132,9 +132,9 @@ export default function Champions({ loaderData, actionData }: Route.ComponentPro
             champions.map((champion) => (
               <Card key={champion.id} className="overflow-hidden">
                 <CardContent className="p-6">
-                  <div className="flex items-start gap-6">
+                  <div className="flex flex-col sm:flex-row items-start gap-6">
                     {/* Champion Photo */}
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-start">
                       {champion.photoUrl ? (
                         <Image
                           src={champion.photoUrl}
@@ -150,7 +150,7 @@ export default function Champions({ loaderData, actionData }: Route.ComponentPro
                     </div>
                     
                     {/* Champion Info */}
-                    <div className="flex-grow">
+                    <div className="flex-grow w-full sm:w-auto">
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-2xl font-bold text-gray-900">
