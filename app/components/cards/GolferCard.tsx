@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, Button, Spinner } from '../ui';
 
 interface GolferCardProps {
@@ -9,9 +9,6 @@ interface GolferCardProps {
     name: string;
     email?: string | null;
     phone?: string | null;
-    cabin?: number | null;
-    totalScore: number | null;
-    roundsPlayed: number;
   };
   user: {
     isAdmin: boolean;
@@ -26,7 +23,7 @@ export function GolferCard({
   user, 
   deletingGolferId, 
   setDeletingGolferId, 
-  getUrlWithCurrentParams 
+  getUrlWithCurrentParams
 }: GolferCardProps) {
   return (
     <Card>
@@ -47,17 +44,12 @@ export function GolferCard({
                   Phone: {golfer.phone}
                 </p>
               )}
-              {golfer.cabin && (
-                <p className="text-sm text-gray-600">
-                  <strong>Cabin:</strong> {golfer.cabin}
-                </p>
-              )}
             </div>
           </div>
           
-          {/* Edit & Delete Buttons (Admin Only) */}
+          {/* Action Buttons (Admin Only) */}
           {user.isAdmin && (
-            <div className="flex gap-2">
+            <div className="flex gap-2">              
               {/* Edit Button */}
               <Link to={getUrlWithCurrentParams(`/golfers/${golfer.id}/edit`)}>
                 <Button 
@@ -101,30 +93,6 @@ export function GolferCard({
               </form>
             </div>
           )}
-        </div>
-        
-        {/* Tournament Score Section */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-medium text-gray-700">Tournament Score</h4>
-              <p className="text-xs text-gray-500 mt-1">
-                {golfer.totalScore !== null 
-                  ? `${golfer.roundsPlayed} round${golfer.roundsPlayed !== 1 ? 's' : ''} played`
-                  : 'No rounds played'
-                }
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-blue-600">
-                {golfer.totalScore !== null ? (
-                  <span>{golfer.totalScore > 0 ? '+' : ''}{golfer.totalScore}</span>
-                ) : (
-                  <span className="text-gray-400">-</span>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </CardContent>
     </Card>

@@ -13,6 +13,7 @@ export default [
   route("golfers", "routes/golfers.tsx"),
   route("golfers/new", "routes/golfers.new.tsx"),
   route("golfers/:id/edit", "routes/golfers.$id.edit.tsx"),
+  route("scores", "routes/scores.tsx"),
   route("foursomes", "routes/foursomes.tsx"),
   route("foursomes/new", "routes/foursomes.new.tsx"),
   route("foursomes/:id/edit", "routes/foursomes.$id.edit.tsx"),

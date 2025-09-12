@@ -18,16 +18,6 @@ const GolferSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
-  cabin: z.string().optional(),
-}).refine((data) => {
-  if (data.cabin && data.cabin !== '') {
-    const cabinNum = parseInt(data.cabin);
-    return !isNaN(cabinNum) && cabinNum >= 1 && cabinNum <= 4;
-  }
-  return true;
-}, {
-  message: "Cabin must be a number between 1 and 4",
-  path: ["cabin"]
 });
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -57,33 +47,54 @@ export async function action({ request }: Route.ActionArgs) {
   }
   
   const formData = await request.formData();
+  const url = new URL(request.url);
+  
   const data = {
     name: formData.get('name') as string,
     email: formData.get('email') as string || undefined,
     phone: formData.get('phone') as string || undefined,
-    cabin: formData.get('cabin') as string || undefined,
   };
 
   try {
     const validatedData = GolferSchema.parse(data);
     
-    await prisma.golfer.create({
+    // Check if golfer already exists (unique name constraint)
+    const existingGolfer = await prisma.golfer.findUnique({
+      where: {
+        name: validatedData.name
+      }
+    });
+    
+    if (existingGolfer) {
+      return { error: `A golfer named "${validatedData.name}" already exists` };
+    }
+    
+    // Create new golfer with default active status for current year
+    const newGolfer = await prisma.golfer.create({
       data: {
         name: validatedData.name,
         email: validatedData.email || null,
         phone: validatedData.phone || null,
-        cabin: validatedData.cabin && validatedData.cabin !== '' ? parseInt(validatedData.cabin) : null,
+      }
+    });
+    
+    // Create default yearly status for current year (2025)
+    await prisma.golferStatus.create({
+      data: {
+        golferId: newGolfer.id,
+        year: 2025,
+        isActive: true,
+        cabin: null
       }
     });
     
     // Preserve search parameters when redirecting
-    const url = new URL(request.url);
     const sort = url.searchParams.get('sort');
     const order = url.searchParams.get('order');
     
     const redirectParams = new URLSearchParams();
-    if (sort && sort !== 'createdAt') redirectParams.set('sort', sort);
-    if (order && order !== 'desc') redirectParams.set('order', order);
+    if (sort && sort !== 'name') redirectParams.set('sort', sort);
+    if (order && order !== 'asc') redirectParams.set('order', order);
     
     const redirectUrl = redirectParams.toString() ? `/golfers?${redirectParams.toString()}` : '/golfers';
     return redirect(redirectUrl);
@@ -102,8 +113,8 @@ export default function NewGolfer({ loaderData, actionData }: Route.ComponentPro
   // Generate back URL with preserved search parameters
   const getBackUrl = () => {
     const params = new URLSearchParams();
-    if (sort && sort !== 'createdAt') params.set('sort', sort);
-    if (order && order !== 'desc') params.set('order', order);
+    if (sort && sort !== 'name') params.set('sort', sort);
+    if (order && order !== 'asc') params.set('order', order);
     const queryString = params.toString();
     return queryString ? `/golfers?${queryString}` : '/golfers';
   };
@@ -193,25 +204,6 @@ export default function NewGolfer({ loaderData, actionData }: Route.ComponentPro
                 />
               </div>
               
-              <div>
-                <label htmlFor="cabin" className="block text-sm font-medium text-gray-700 mb-2">
-                  Cabin (Optional)
-                </label>
-                <select 
-                  id="cabin"
-                  name="cabin" 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Select a cabin</option>
-                  <option value="1">Cabin 1</option>
-                  <option value="2">Cabin 2</option>
-                  <option value="3">Cabin 3</option>
-                  <option value="4">Cabin 4</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Assign the golfer to a cabin (1-4)
-                </p>
-              </div>
 
               {actionData?.error && (
                 <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">

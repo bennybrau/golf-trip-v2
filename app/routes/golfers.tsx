@@ -21,74 +21,21 @@ export async function loader({ request }: Route.LoaderArgs) {
     
     // Get parameters from URL
     const url = new URL(request.url);
-    const sort = url.searchParams.get('sort') || 'score';
+    const sort = url.searchParams.get('sort') || 'name';
     const order = url.searchParams.get('order') || 'asc';
-    const year = url.searchParams.get('year') || '2025';
     
-    // Define valid sort options
-    const validSorts = ['name', 'createdAt', 'score'];
+    // Define valid sort options (removed score since it's not on this page)
+    const validSorts = ['name', 'createdAt'];
     const validOrders = ['asc', 'desc'];
     
-    const sortBy = validSorts.includes(sort) ? sort : 'score';
+    const sortBy = validSorts.includes(sort) ? sort : 'name';
     const sortOrder = validOrders.includes(order) ? order : 'asc';
-    const selectedYear = parseInt(year);
     
     const golfers = await prisma.golfer.findMany({
-      include: {
-        foursomesAsPlayer1: {
-          where: { year: selectedYear }
-        },
-        foursomesAsPlayer2: {
-          where: { year: selectedYear }
-        },
-        foursomesAsPlayer3: {
-          where: { year: selectedYear }
-        },
-        foursomesAsPlayer4: {
-          where: { year: selectedYear }
-        },
-      },
-      orderBy: sortBy !== 'score' ? { [sortBy]: sortOrder } : { createdAt: 'desc' }
+      orderBy: { [sortBy]: sortOrder }
     });
-
-    // Calculate total scores for each golfer
-    const golfersWithScores = golfers.map(golfer => {
-      const allFoursomes = [
-        ...golfer.foursomesAsPlayer1,
-        ...golfer.foursomesAsPlayer2,
-        ...golfer.foursomesAsPlayer3,
-        ...golfer.foursomesAsPlayer4,
-      ];
-      
-      const totalScore = allFoursomes.length > 0 
-        ? allFoursomes.reduce((sum, foursome) => sum + foursome.score, 0)
-        : null;
-      
-      return {
-        ...golfer,
-        totalScore,
-        roundsPlayed: allFoursomes.length
-      };
-    });
-
-    // Sort by score if requested (since we can't sort calculated fields in DB)
-    if (sortBy === 'score') {
-      golfersWithScores.sort((a, b) => {
-        // Handle null scores (golfers with no rounds)
-        if (a.totalScore === null && b.totalScore === null) return 0;
-        if (a.totalScore === null) return 1; // Put null scores at the end
-        if (b.totalScore === null) return -1; // Put null scores at the end
-        
-        // Sort by score (ascending = best score first, descending = worst score first)
-        const scoreComparison = sortOrder === 'asc' 
-          ? a.totalScore - b.totalScore 
-          : b.totalScore - a.totalScore;
-        
-        return scoreComparison;
-      });
-    }
     
-    return { user, golfers: golfersWithScores, currentSort: sortBy, currentOrder: sortOrder, selectedYear };
+    return { user, golfers, currentSort: sortBy, currentOrder: sortOrder };
   } catch (response) {
     throw response;
   }
@@ -146,13 +93,14 @@ export async function action({ request }: Route.ActionArgs) {
       return { error: "Failed to delete golfer" };
     }
   }
+
   
   return { error: "Invalid action" };
 }
 
 
 export default function Golfers({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfers, currentSort, currentOrder, selectedYear } = loaderData;
+  const { user, golfers, currentSort, currentOrder } = loaderData;
   const [deletingGolferId, setDeletingGolferId] = useState<string | null>(null);
   
   const getSortUrl = (sortBy: string) => {
@@ -160,7 +108,6 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
     const params = new URLSearchParams();
     params.set('sort', sortBy);
     params.set('order', newOrder);
-    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
     return `/golfers?${params.toString()}`;
   };
   
@@ -174,9 +121,8 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
   // Generate URL with current search parameters
   const getUrlWithCurrentParams = (basePath: string) => {
     const params = new URLSearchParams();
-    if (currentSort !== 'score') params.set('sort', currentSort);
+    if (currentSort !== 'name') params.set('sort', currentSort);
     if (currentOrder !== 'asc') params.set('order', currentOrder);
-    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
@@ -207,54 +153,24 @@ export default function Golfers({ loaderData, actionData }: Route.ComponentProps
             )}
           </div>
           
-          {/* Year and Sort Controls */}
-          <div className="mt-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            {/* Year Selector */}
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-gray-800 font-medium">Year:</span>
-              <select 
-                value={selectedYear}
-                onChange={(e) => {
-                  const newYear = e.target.value;
-                  const params = new URLSearchParams();
-                  params.set('year', newYear);
-                  if (currentSort !== 'score') params.set('sort', currentSort);
-                  if (currentOrder !== 'asc') params.set('order', currentOrder);
-                  window.location.href = `/golfers?${params.toString()}`;
-                }}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+          {/* Sort Controls */}
+          {golfers.length > 0 && (
+            <div className="mt-4 flex gap-2 items-center">
+              <span className="text-sm text-gray-800 font-medium">Sort by:</span>
+              <Link 
+                to={getSortUrl('name')}
+                className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
               >
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
+                Name {getSortIcon('name')}
+              </Link>
+              <Link 
+                to={getSortUrl('createdAt')}
+                className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
+              >
+                Date Added {getSortIcon('createdAt')}
+              </Link>
             </div>
-            
-            {/* Sort Controls */}
-            {golfers.length > 0 && (
-              <div className="flex gap-2 items-center">
-                <span className="text-sm text-gray-800 font-medium">Sort by:</span>
-                <Link 
-                  to={getSortUrl('name')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Name {getSortIcon('name')}
-                </Link>
-                <Link 
-                  to={getSortUrl('createdAt')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Date Added {getSortIcon('createdAt')}
-                </Link>
-                <Link 
-                  to={getSortUrl('score')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Score {getSortIcon('score')}
-                </Link>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
 

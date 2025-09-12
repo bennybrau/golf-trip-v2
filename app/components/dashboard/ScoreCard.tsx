@@ -16,9 +16,11 @@ export function ScoreCard({ totalScore, golfer }: ScoreCardProps) {
             <h3 className="text-sm font-medium text-blue-600 mb-1">
               Your Score
             </h3>
-            <div className="text-3xl font-bold text-blue-900">
+            <div className="text-3xl font-bold">
               {totalScore !== null ? (
-                <span>{totalScore > 0 ? '+' : ''}{totalScore}</span>
+                <span className={totalScore < 0 ? 'text-blue-600' : 'text-black'}>
+                  {totalScore > 0 ? '+' : ''}{totalScore}
+                </span>
               ) : (
                 <span className="text-gray-400">-</span>
               )}

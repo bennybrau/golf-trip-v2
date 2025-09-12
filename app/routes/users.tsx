@@ -33,7 +33,6 @@ export async function loader({ request }: { request: Request }) {
           select: {
             id: true,
             name: true,
-            cabin: true,
           }
         }
       },

@@ -12,7 +12,6 @@ interface UserCardProps {
     createdAt: string;
     golfer?: {
       name: string;
-      cabin?: number | null;
     } | null;
   };
   currentUser: {
@@ -110,7 +109,6 @@ export function UserCard({
             {userItem.golfer ? (
               <p className="text-sm text-green-600">
                 ✓ Associated with golfer: {userItem.golfer.name}
-                {userItem.golfer.cabin && ` (Cabin ${userItem.golfer.cabin})`}
               </p>
             ) : (
               <p className="text-sm text-orange-600">

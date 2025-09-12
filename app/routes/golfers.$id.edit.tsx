@@ -40,21 +40,42 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     
     const golferId = params.id;
     
-    // Get the golfer to edit
+    // Preserve search parameters from the referring page
+    const url = new URL(request.url);
+    const sort = url.searchParams.get('sort');
+    const order = url.searchParams.get('order');
+    const year = url.searchParams.get('year') || '2025';
+    const selectedYear = parseInt(year);
+    
+    // Get the golfer to edit with yearly status
     const golfer = await prisma.golfer.findUnique({
       where: { id: golferId },
+      include: {
+        yearlyStatus: {
+          where: { year: selectedYear }
+        }
+      }
     });
     
     if (!golfer) {
       throw new Response("Golfer not found", { status: 404 });
     }
     
-    // Preserve search parameters from the referring page
-    const url = new URL(request.url);
-    const sort = url.searchParams.get('sort');
-    const order = url.searchParams.get('order');
+    // Get or create yearly status for editing
+    let yearlyStatus = golfer.yearlyStatus[0];
+    if (!yearlyStatus) {
+      // Create yearly status if it doesn't exist
+      yearlyStatus = await prisma.golferStatus.create({
+        data: {
+          golferId: golfer.id,
+          year: selectedYear,
+          isActive: true,
+          cabin: null
+        }
+      });
+    }
     
-    return { user, golfer, sort, order };
+    return { user, golfer, yearlyStatus, sort, order, selectedYear };
   } catch (response) {
     throw response;
   }
@@ -69,6 +90,9 @@ export async function action({ request, params }: Route.ActionArgs) {
   
   const golferId = params.id;
   const formData = await request.formData();
+  const url = new URL(request.url);
+  const selectedYear = parseInt(url.searchParams.get('year') || '2025');
+  
   const data = {
     name: formData.get('name') as string,
     email: formData.get('email') as string || undefined,
@@ -88,24 +112,55 @@ export async function action({ request, params }: Route.ActionArgs) {
     
     const validatedData = GolferSchema.parse(data);
     
+    // Check for name conflicts (excluding current golfer)
+    const conflictingGolfer = await prisma.golfer.findFirst({
+      where: {
+        name: validatedData.name,
+        id: { not: golferId }
+      }
+    });
+    
+    if (conflictingGolfer) {
+      return { error: `A golfer named "${validatedData.name}" already exists` };
+    }
+    
+    // Update golfer basic info
     await prisma.golfer.update({
       where: { id: golferId },
       data: {
         name: validatedData.name,
         email: validatedData.email || null,
         phone: validatedData.phone || null,
+      }
+    });
+    
+    // Update or create yearly status for cabin
+    await prisma.golferStatus.upsert({
+      where: {
+        golferId_year: {
+          golferId,
+          year: selectedYear
+        }
+      },
+      create: {
+        golferId,
+        year: selectedYear,
+        cabin: validatedData.cabin && validatedData.cabin !== '' ? parseInt(validatedData.cabin) : null,
+        isActive: true,
+      },
+      update: {
         cabin: validatedData.cabin && validatedData.cabin !== '' ? parseInt(validatedData.cabin) : null,
       }
     });
     
     // Preserve search parameters when redirecting
-    const url = new URL(request.url);
     const sort = url.searchParams.get('sort');
     const order = url.searchParams.get('order');
     
     const redirectParams = new URLSearchParams();
     if (sort && sort !== 'createdAt') redirectParams.set('sort', sort);
     if (order && order !== 'desc') redirectParams.set('order', order);
+    if (selectedYear !== 2025) redirectParams.set('year', selectedYear.toString());
     
     const redirectUrl = redirectParams.toString() ? `/golfers?${redirectParams.toString()}` : '/golfers';
     return redirect(redirectUrl);
@@ -121,7 +176,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function EditGolfer({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfer, sort, order } = loaderData;
+  const { user, golfer, sort, order, selectedYear } = loaderData;
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Generate back URL with preserved search parameters
@@ -129,6 +184,7 @@ export default function EditGolfer({ loaderData, actionData }: Route.ComponentPr
     const params = new URLSearchParams();
     if (sort && sort !== 'createdAt') params.set('sort', sort);
     if (order && order !== 'desc') params.set('order', order);
+    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
     const queryString = params.toString();
     return queryString ? `/golfers?${queryString}` : '/golfers';
   };
@@ -225,7 +281,7 @@ export default function EditGolfer({ loaderData, actionData }: Route.ComponentPr
                 <select 
                   id="cabin"
                   name="cabin" 
-                  defaultValue={golfer.cabin?.toString() || ''}
+                  defaultValue={loaderData.yearlyStatus?.cabin?.toString() || ''}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="">Select a cabin</option>

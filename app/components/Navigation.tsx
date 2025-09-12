@@ -55,6 +55,13 @@ export function Navigation({ user }: NavigationProps) {
             </Link>
             
             <Link
+              to="/scores"
+              className={getNavLinkClasses('/scores')}
+            >
+              Scores
+            </Link>
+            
+            <Link
               to="/foursomes"
               className={getNavLinkClasses('/foursomes')}
             >
@@ -171,6 +178,14 @@ export function Navigation({ user }: NavigationProps) {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Golfers
+              </Link>
+              
+              <Link
+                to="/scores"
+                className={getNavLinkClasses('/scores', true)}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Scores
               </Link>
               
               <Link

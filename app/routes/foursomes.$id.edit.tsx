@@ -71,8 +71,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       throw new Response("Foursome not found", { status: 404 });
     }
     
-    // Get all golfers for the form
+    // Get active golfers for the foursome's year
     const golfers = await prisma.golfer.findMany({
+      where: {
+        yearlyStatus: {
+          some: {
+            year: foursome.year,
+            isActive: true
+          }
+        }
+      },
       orderBy: { name: 'asc' }
     });
     
@@ -150,9 +158,41 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 }
 
+// Helper function to format date for datetime-local input
+function formatDateTimeLocal(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export default function EditFoursome({ loaderData, actionData }: Route.ComponentProps) {
   const { user, foursome, golfers = [], sort, order } = loaderData;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedGolfers, setSelectedGolfers] = useState({
+    golfer1Id: foursome.golfer1Id || '',
+    golfer2Id: foursome.golfer2Id || '',
+    golfer3Id: foursome.golfer3Id || '',
+    golfer4Id: foursome.golfer4Id || ''
+  });
+
+  // Handle golfer selection changes
+  const handleGolferChange = (selectName: string, golferId: string) => {
+    setSelectedGolfers(prev => ({
+      ...prev,
+      [selectName]: golferId
+    }));
+  };
+
+  // Check if a golfer is already selected in another dropdown
+  const isGolferDisabled = (golferId: string, currentSelectName: string) => {
+    const selectedInOther = Object.entries(selectedGolfers).some(
+      ([key, value]) => key !== currentSelectName && value === golferId && value !== ''
+    );
+    return selectedInOther;
+  };
 
   // Generate URL with current search parameters
   const getUrlWithCurrentParams = (basePath: string) => {
@@ -254,7 +294,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                   name="teeTime" 
                   type="datetime-local" 
                   required
-                  defaultValue={new Date(foursome.teeTime).toISOString().slice(0, 16)}
+                  defaultValue={formatDateTimeLocal(new Date(foursome.teeTime))}
                   className="w-full"
                 />
               </div>
@@ -267,12 +307,19 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                   <select 
                     id="golfer1Id"
                     name="golfer1Id" 
-                    defaultValue={foursome.golfer1Id || ''}
+                    value={selectedGolfers.golfer1Id}
+                    onChange={(e) => handleGolferChange('golfer1Id', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
-                      <option key={golfer.id} value={golfer.id}>{golfer.name}</option>
+                      <option 
+                        key={golfer.id} 
+                        value={golfer.id}
+                        disabled={isGolferDisabled(golfer.id, 'golfer1Id')}
+                      >
+                        {golfer.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -284,12 +331,19 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                   <select 
                     id="golfer2Id"
                     name="golfer2Id" 
-                    defaultValue={foursome.golfer2Id || ''}
+                    value={selectedGolfers.golfer2Id}
+                    onChange={(e) => handleGolferChange('golfer2Id', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
-                      <option key={golfer.id} value={golfer.id}>{golfer.name}</option>
+                      <option 
+                        key={golfer.id} 
+                        value={golfer.id}
+                        disabled={isGolferDisabled(golfer.id, 'golfer2Id')}
+                      >
+                        {golfer.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -301,12 +355,19 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                   <select 
                     id="golfer3Id"
                     name="golfer3Id" 
-                    defaultValue={foursome.golfer3Id || ''}
+                    value={selectedGolfers.golfer3Id}
+                    onChange={(e) => handleGolferChange('golfer3Id', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
-                      <option key={golfer.id} value={golfer.id}>{golfer.name}</option>
+                      <option 
+                        key={golfer.id} 
+                        value={golfer.id}
+                        disabled={isGolferDisabled(golfer.id, 'golfer3Id')}
+                      >
+                        {golfer.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -318,12 +379,19 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                   <select 
                     id="golfer4Id"
                     name="golfer4Id" 
-                    defaultValue={foursome.golfer4Id || ''}
+                    value={selectedGolfers.golfer4Id}
+                    onChange={(e) => handleGolferChange('golfer4Id', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
-                      <option key={golfer.id} value={golfer.id}>{golfer.name}</option>
+                      <option 
+                        key={golfer.id} 
+                        value={golfer.id}
+                        disabled={isGolferDisabled(golfer.id, 'golfer4Id')}
+                      >
+                        {golfer.name}
+                      </option>
                     ))}
                   </select>
                 </div>
