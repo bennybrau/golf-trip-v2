@@ -43,10 +43,16 @@ async function syncLocalToRemote() {
       }),
       localPrisma.champion.findMany({
         orderBy: { year: 'asc' }
+      }),
+      localPrisma.session.findMany({
+        orderBy: { createdAt: 'asc' }
+      }),
+      localPrisma.passwordResetToken.findMany({
+        orderBy: { createdAt: 'asc' }
       })
     ]);
     
-    const [users, golfers, golferStatuses, foursomes, photos, champions] = localData;
+    const [users, golfers, golferStatuses, foursomes, photos, champions, sessions, passwordResetTokens] = localData;
     
     console.log('📊 Local database contents:');
     console.log(`   - Users: ${users.length}`);
@@ -55,6 +61,8 @@ async function syncLocalToRemote() {
     console.log(`   - Foursomes: ${foursomes.length}`);
     console.log(`   - Photos: ${photos.length}`);
     console.log(`   - Champions: ${champions.length}`);
+    console.log(`   - Sessions: ${sessions.length}`);
+    console.log(`   - Password Reset Tokens: ${passwordResetTokens.length}`);
     
     // Check remote database current state
     console.log('\\n🔍 Checking remote database current state...');
@@ -64,10 +72,12 @@ async function syncLocalToRemote() {
       remotePrisma.$queryRaw`SELECT COUNT(*) as count FROM "GolferStatus"`.catch(() => [{ count: 0 }]),
       remotePrisma.foursome.count(),
       remotePrisma.photo.count(),
-      remotePrisma.champion.count()
+      remotePrisma.champion.count(),
+      remotePrisma.session.count().catch(() => 0),
+      remotePrisma.passwordResetToken.count().catch(() => 0)
     ]);
     
-    const [remoteUsers, remoteGolfers, remoteGolferStatuses, remoteFoursomes, remotePhotos, remoteChampions] = remoteData;
+    const [remoteUsers, remoteGolfers, remoteGolferStatuses, remoteFoursomes, remotePhotos, remoteChampions, remoteSessions, remotePasswordResetTokens] = remoteData;
     const golferStatusCount = Array.isArray(remoteGolferStatuses) ? Number(remoteGolferStatuses[0]?.count || 0) : 0;
     
     console.log('📊 Remote database contents:');
@@ -77,6 +87,8 @@ async function syncLocalToRemote() {
     console.log(`   - Foursomes: ${remoteFoursomes}`);
     console.log(`   - Photos: ${remotePhotos}`);
     console.log(`   - Champions: ${remoteChampions}`);
+    console.log(`   - Sessions: ${remoteSessions}`);
+    console.log(`   - Password Reset Tokens: ${remotePasswordResetTokens}`);
     
     console.log('\\n⚠️  WARNING: This will completely replace the remote database with local data.');
     console.log('All existing remote data will be deleted and replaced.');
@@ -105,9 +117,24 @@ async function syncLocalToRemote() {
       }
     }
     
-    // Clear users (this will cascade to sessions)
+    // Clear sessions and password reset tokens (depend on users)
+    try {
+      await remotePrisma.session.deleteMany();
+      console.log('   ✅ Cleared sessions');
+    } catch (error) {
+      console.log('   ⚠️  Sessions table may not exist - will be created');
+    }
+    
+    try {
+      await remotePrisma.passwordResetToken.deleteMany();
+      console.log('   ✅ Cleared password reset tokens');
+    } catch (error) {
+      console.log('   ⚠️  PasswordResetToken table may not exist - will be created');
+    }
+    
+    // Clear users
     await remotePrisma.user.deleteMany();
-    console.log('   ✅ Cleared users and sessions');
+    console.log('   ✅ Cleared users');
     
     await remotePrisma.golfer.deleteMany();
     console.log('   ✅ Cleared golfers');
@@ -265,6 +292,48 @@ async function syncLocalToRemote() {
     }
     console.log(`   ✅ Synced ${syncedChampions}/${champions.length} champions`);
     
+    // 7. Sync sessions (depends on users)
+    console.log('\\n🔐 Syncing sessions...');
+    let syncedSessions = 0;
+    for (const session of sessions) {
+      try {
+        await remotePrisma.session.create({
+          data: {
+            id: session.id,
+            token: session.token,
+            userId: session.userId,
+            expiresAt: session.expiresAt,
+            createdAt: session.createdAt,
+          }
+        });
+        syncedSessions++;
+      } catch (error) {
+        console.log(`   ❌ Failed to sync session ${session.token}: ${error.message}`);
+      }
+    }
+    console.log(`   ✅ Synced ${syncedSessions}/${sessions.length} sessions`);
+    
+    // 8. Sync password reset tokens (depends on users)
+    console.log('\\n🔑 Syncing password reset tokens...');
+    let syncedTokens = 0;
+    for (const token of passwordResetTokens) {
+      try {
+        await remotePrisma.passwordResetToken.create({
+          data: {
+            id: token.id,
+            token: token.token,
+            userId: token.userId,
+            expiresAt: token.expiresAt,
+            createdAt: token.createdAt,
+          }
+        });
+        syncedTokens++;
+      } catch (error) {
+        console.log(`   ❌ Failed to sync password reset token ${token.token}: ${error.message}`);
+      }
+    }
+    console.log(`   ✅ Synced ${syncedTokens}/${passwordResetTokens.length} password reset tokens`);
+    
     // Final verification
     console.log('\\n🔍 Verifying sync results...');
     const finalRemoteData = await Promise.all([
@@ -273,10 +342,12 @@ async function syncLocalToRemote() {
       remotePrisma.$queryRaw`SELECT COUNT(*) as count FROM "GolferStatus"`.catch(() => [{ count: 0 }]),
       remotePrisma.foursome.count(),
       remotePrisma.photo.count(),
-      remotePrisma.champion.count()
+      remotePrisma.champion.count(),
+      remotePrisma.session.count().catch(() => 0),
+      remotePrisma.passwordResetToken.count().catch(() => 0)
     ]);
     
-    const [finalUsers, finalGolfers, finalGolferStatuses, finalFoursomes, finalPhotos, finalChampions] = finalRemoteData;
+    const [finalUsers, finalGolfers, finalGolferStatuses, finalFoursomes, finalPhotos, finalChampions, finalSessions, finalPasswordResetTokens] = finalRemoteData;
     const finalGolferStatusCount = Array.isArray(finalGolferStatuses) ? Number(finalGolferStatuses[0]?.count || 0) : 0;
     
     console.log('\\n📊 Final remote database state:');
@@ -286,6 +357,8 @@ async function syncLocalToRemote() {
     console.log(`   - Foursomes: ${finalFoursomes} (was ${remoteFoursomes})`);
     console.log(`   - Photos: ${finalPhotos} (was ${remotePhotos})`);
     console.log(`   - Champions: ${finalChampions} (was ${remoteChampions})`);
+    console.log(`   - Sessions: ${finalSessions} (was ${remoteSessions})`);
+    console.log(`   - Password Reset Tokens: ${finalPasswordResetTokens} (was ${remotePasswordResetTokens})`);
     
     console.log('\\n🎉 Sync completed successfully!');
     console.log('Remote database is now a clone of your local database.');

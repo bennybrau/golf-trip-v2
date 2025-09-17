@@ -4,6 +4,8 @@ export default [
   index("routes/home.tsx"),
   route("login", "routes/login.tsx"),
   route("register", "routes/register.tsx"),
+  route("forgot-password", "routes/forgot-password.tsx"),
+  route("reset-password/:token", "routes/reset-password.$token.tsx"),
   route("account", "routes/account.tsx"),
   route("logout", "routes/logout.tsx"),
   route("install", "routes/install.tsx"),

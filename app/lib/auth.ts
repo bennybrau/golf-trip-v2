@@ -107,3 +107,74 @@ export async function updateUser(id: string, updates: Partial<Omit<User, 'id' | 
     isAdmin: user.isAdmin,
   };
 }
+
+export async function createPasswordResetToken(email: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+      return null;
+  }
+
+  // Delete any existing reset tokens for this user
+  await prisma.passwordResetToken.deleteMany({
+    where: { userId: user.id },
+  });
+
+  const token = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await prisma.passwordResetToken.create({
+    data: {
+      token,
+      userId: user.id,
+      expiresAt,
+    },
+  });
+
+  return token;
+}
+
+export async function validatePasswordResetToken(token: string, deleteIfExpired: boolean = false): Promise<string | null> {
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+
+  if (!resetToken) {
+    return null;
+  }
+
+  if (resetToken.expiresAt < new Date()) {
+    if (deleteIfExpired) {
+      await prisma.passwordResetToken.delete({ where: { id: resetToken.id } });
+    }
+    return null;
+  }
+
+  return resetToken.userId;
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
+  const userId = await validatePasswordResetToken(token, true);
+  
+  if (!userId) {
+    return false;
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  
+  // Update password and delete the reset token
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    }),
+    prisma.passwordResetToken.delete({
+      where: { token },
+    }),
+  ]);
+
+  return true;
+}

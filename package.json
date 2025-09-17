@@ -14,7 +14,8 @@
     "db:reset": "prisma migrate reset",
     "db:deploy": "prisma migrate deploy",
     "update-sw": "node scripts/update-sw-cache.js",
-    "db:sync-to-remote": "node scripts/sync-local-to-remote.mjs"
+    "db:sync-to-remote": "node scripts/sync-local-to-remote.mjs",
+    "db:sync-from-remote": "node scripts/sync-remote-to-local.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.10.1",
@@ -29,6 +30,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.5.3",
+    "resend": "^6.1.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
