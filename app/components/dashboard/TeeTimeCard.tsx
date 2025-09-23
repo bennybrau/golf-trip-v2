@@ -1,4 +1,5 @@
 import { Card, CardContent } from '../ui';
+import { formatDateWithTimezone } from '../../lib/timeUtils';
 
 interface TeeTimeCardProps {
   nextTeeTime: {
@@ -10,10 +11,7 @@ interface TeeTimeCardProps {
 export function TeeTimeCard({ nextTeeTime }: TeeTimeCardProps) {
   const formatTeeTime = (teeTime: string | Date) => {
     const date = typeof teeTime === 'string' ? new Date(teeTime) : teeTime;
-    return {
-      date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    };
+    return formatDateWithTimezone(date);
   };
 
   const getRoundLabel = (round: string) => {
@@ -37,7 +35,7 @@ export function TeeTimeCard({ nextTeeTime }: TeeTimeCardProps) {
             {nextTeeTime ? (
               <>
                 <div className="text-lg font-bold text-purple-900">
-                  {formatTeeTime(nextTeeTime.teeTime).time}
+                  {formatTeeTime(nextTeeTime.teeTime).time} {formatTeeTime(nextTeeTime.teeTime).timezone}
                 </div>
                 <p className="text-xs text-purple-700 mt-1">
                   {formatTeeTime(nextTeeTime.teeTime).date}

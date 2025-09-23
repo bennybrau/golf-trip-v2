@@ -6,6 +6,7 @@ import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
 import { prisma } from '../lib/db';
 import { z } from 'zod';
 import type { Route } from './+types/foursomes.new';
+import { parseDateTimeLocal } from '../lib/timeUtils';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -106,7 +107,8 @@ export async function action({ request }: Route.ActionArgs) {
   try {
     const validatedData = FoursomeSchema.parse(data);
     const scoreValue = validatedData.score && validatedData.score !== '' ? parseInt(validatedData.score) : 0;
-    const teeTimeValue = new Date(validatedData.teeTime);
+    // Parse the datetime-local input with proper timezone handling
+    const teeTimeValue = parseDateTimeLocal(validatedData.teeTime);
     
     await prisma.foursome.create({
       data: {
@@ -281,7 +283,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
 
               <div>
                 <label htmlFor="teeTime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tee Time *
+                  Tee Time * <span className="text-xs font-normal text-gray-500">(Eastern Time)</span>
                 </label>
                 <Input 
                   id="teeTime"
@@ -290,6 +292,9 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                   required
                   className="w-full"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  All tee times are in Eastern Time (ET)
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

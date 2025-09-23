@@ -6,6 +6,7 @@ import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
 import { prisma } from '../lib/db';
 import { z } from 'zod';
 import type { Route } from './+types/foursomes.$id.edit';
+import { parseDateTimeLocal, formatDateTimeLocal } from '../lib/timeUtils';
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -127,7 +128,8 @@ export async function action({ request, params }: Route.ActionArgs) {
     
     const validatedData = FoursomeSchema.parse(data);
     const scoreValue = validatedData.score && validatedData.score !== '' ? parseInt(validatedData.score) : 0;
-    const teeTimeValue = new Date(validatedData.teeTime);
+    // Parse the datetime-local input with proper timezone handling
+    const teeTimeValue = parseDateTimeLocal(validatedData.teeTime);
     
     await prisma.foursome.update({
       where: { id: foursomeId },
@@ -158,15 +160,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 }
 
-// Helper function to format date for datetime-local input
-function formatDateTimeLocal(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
+// formatDateTimeLocal function is now imported from timeUtils
 
 export default function EditFoursome({ loaderData, actionData }: Route.ComponentProps) {
   const { user, foursome, golfers = [], sort, order } = loaderData;
@@ -287,7 +281,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
 
               <div>
                 <label htmlFor="teeTime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tee Time *
+                  Tee Time * <span className="text-xs font-normal text-gray-500">(Eastern Time)</span>
                 </label>
                 <Input 
                   id="teeTime"
@@ -297,6 +291,9 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                   defaultValue={formatDateTimeLocal(new Date(foursome.teeTime))}
                   className="w-full"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  All tee times are in Eastern Time (ET)
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

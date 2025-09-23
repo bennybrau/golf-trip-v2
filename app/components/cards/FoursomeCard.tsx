@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent, Button, Spinner } from '../ui';
+import { formatTeeTimeDisplay } from '../../lib/timeUtils';
 
 interface FoursomeCardProps {
   foursome: {
@@ -33,17 +34,7 @@ const getCourseBadgeClasses = (course: string) => {
   return 'bg-blue-500 text-white'; // Default for other courses
 };
 
-const formatTeeTime = (teeTime: string) => {
-  const date = new Date(teeTime);
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const day = dayNames[date.getDay()];
-  const time = date.toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
-    minute: '2-digit', 
-    hour12: true 
-  });
-  return `${day} ${time}`;
-};
+// formatTeeTime function replaced with formatTeeTimeDisplay from timeUtils
 
 export function FoursomeCard({ 
   foursome, 
@@ -60,7 +51,7 @@ export function FoursomeCard({
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h3 className="text-lg font-semibold text-gray-900">
-                {formatTeeTime(foursome.teeTime)}
+                {formatTeeTimeDisplay(foursome.teeTime)}
               </h3>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCourseBadgeClasses(foursome.course)}`}>
                 {foursome.course}

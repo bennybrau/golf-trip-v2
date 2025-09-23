@@ -24,6 +24,8 @@
     "@types/bcryptjs": "^2.4.6",
     "@vercel/analytics": "^1.5.0",
     "bcryptjs": "^3.0.2",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "isbot": "^5.1.27",
     "lucide-react": "^0.525.0",
     "prisma": "^6.10.1",
