@@ -4,3 +4,4 @@ export { LeaderCard } from './LeaderCard';
 export { TeeTimeCard } from './TeeTimeCard';
 export { WeatherCard } from './WeatherCard';
 export { WeekendMenuCard } from './WeekendMenuCard';
+export { ChampionCard } from './ChampionCard';

@@ -1,7 +1,7 @@
 import { requireAuth } from '../lib/session';
 import { Navigation } from '../components/Navigation';
 import { Card, CardContent } from '../components/ui';
-import { ScoreCard, CabinCard, LeaderCard, TeeTimeCard, WeatherCard, WeekendMenuCard } from '../components/dashboard';
+import { ScoreCard, WeatherCard, ChampionCard } from '../components/dashboard';
 import { InstallPromptSimple } from '../components/InstallPromptSimple';
 import { prisma } from '../lib/db';
 import { getWeatherForPlymouth } from '../lib/weather';
@@ -30,22 +30,15 @@ export async function loader({ request }: Route.LoaderArgs) {
         golfer: {
           include: {
             foursomesAsPlayer1: { 
-              where: { year: selectedYear },
-              orderBy: { teeTime: 'asc' } 
+              where: { year: selectedYear }
             },
             foursomesAsPlayer2: { 
-              where: { year: selectedYear },
-              orderBy: { teeTime: 'asc' } 
+              where: { year: selectedYear }
             },
             foursomesAsPlayer3: { 
-              where: { year: selectedYear },
-              orderBy: { teeTime: 'asc' } 
+              where: { year: selectedYear }
             },
             foursomesAsPlayer4: { 
-              where: { year: selectedYear },
-              orderBy: { teeTime: 'asc' } 
-            },
-            yearlyStatus: {
               where: { year: selectedYear }
             },
           }
@@ -54,7 +47,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     });
     
     let totalScore = null;
-    let nextTeeTime = null;
     
     // Fetch weather data for Plymouth, IN
     const weather = await getWeatherForPlymouth();
@@ -70,81 +62,28 @@ export async function loader({ request }: Route.LoaderArgs) {
       
       if (allFoursomes.length > 0) {
         totalScore = allFoursomes.reduce((sum, foursome) => sum + foursome.score, 0);
-        
-        // Find next tee time (first future tee time)
-        const now = new Date();
-        const futureFoursomes = allFoursomes.filter(f => new Date(f.teeTime) > now);
-        if (futureFoursomes.length > 0) {
-          futureFoursomes.sort((a, b) => new Date(a.teeTime).getTime() - new Date(b.teeTime).getTime());
-          nextTeeTime = futureFoursomes[0];
-        }
       }
     }
     
-    // Get tournament leader (golfer with lowest total score)
-    const allGolfers = await prisma.golfer.findMany({
+    // Get current year's champion
+    const currentChampion = await prisma.champion.findUnique({
+      where: { year: selectedYear },
       include: {
-        foursomesAsPlayer1: {
-          where: { year: selectedYear }
-        },
-        foursomesAsPlayer2: {
-          where: { year: selectedYear }
-        },
-        foursomesAsPlayer3: {
-          where: { year: selectedYear }
-        },
-        foursomesAsPlayer4: {
-          where: { year: selectedYear }
-        },
-        yearlyStatus: {
-          where: { year: selectedYear }
-        },
-      }
-    });
-
-    // Filter out inactive golfers
-    const activeGolfers = allGolfers.filter(golfer => {
-      const yearStatus = golfer.yearlyStatus[0];
-      return !yearStatus || yearStatus.isActive;
-    });
-    
-    let tournamentLeader = null;
-    let leaderScore = null;
-    
-    for (const golfer of activeGolfers) {
-      const golferFoursomes = [
-        ...golfer.foursomesAsPlayer1,
-        ...golfer.foursomesAsPlayer2,
-        ...golfer.foursomesAsPlayer3,
-        ...golfer.foursomesAsPlayer4,
-      ];
-      
-      if (golferFoursomes.length > 0) {
-        const golferScore = golferFoursomes.reduce((sum, foursome) => sum + foursome.score, 0);
-        
-        if (leaderScore === null || golferScore < leaderScore) {
-          leaderScore = golferScore;
-          tournamentLeader = golfer;
+        golfer: {
+          select: {
+            name: true
+          }
         }
       }
-    }
-    
-    // Get cabin from yearly status for current golfer
-    let userCabin = null;
-    if (userWithGolfer?.golfer?.yearlyStatus[0]) {
-      userCabin = userWithGolfer.golfer.yearlyStatus[0].cabin;
-    }
+    });
     
     return { 
       user, 
       golfer: userWithGolfer?.golfer || null, 
       totalScore, 
-      nextTeeTime,
-      tournamentLeader,
-      leaderScore,
       weather,
       selectedYear,
-      userCabin
+      currentChampion
     };
   } catch (response) {
     // If authentication fails, the requireAuth function throws a redirect response
@@ -153,7 +92,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { user, golfer, totalScore, nextTeeTime, tournamentLeader, leaderScore, weather, userCabin } = loaderData;
+  const { user, golfer, totalScore, weather, currentChampion } = loaderData;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -176,15 +115,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
         
+        <div className="grid grid-cols-1 gap-6 mb-6">
+          <ChampionCard champion={currentChampion} />
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <ScoreCard totalScore={totalScore} golfer={golfer} />
-          <CabinCard golfer={golfer ? { ...golfer, cabin: userCabin } : null} />
-          <LeaderCard tournamentLeader={tournamentLeader} leaderScore={leaderScore} />
-          <TeeTimeCard nextTeeTime={nextTeeTime} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <WeekendMenuCard />
         </div>
 
         {/* Additional Info Section */}
