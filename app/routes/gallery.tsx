@@ -303,7 +303,7 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
                   <select 
                     id="category"
                     name="category" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                     onChange={(e) => setShowCustomCategory(e.target.value === 'custom')}
                   >
                     <option value="">No category</option>

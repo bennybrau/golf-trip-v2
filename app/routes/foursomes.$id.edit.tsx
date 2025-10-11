@@ -252,7 +252,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                     name="round" 
                     required
                     defaultValue={foursome.round}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select a round</option>
                     {Object.entries(roundLabels).map(([value, label]) => (
@@ -270,7 +270,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                     name="course" 
                     required
                     defaultValue={foursome.course}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select a course</option>
                     <option value="BLACK">Black</option>
@@ -306,7 +306,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                     name="golfer1Id" 
                     value={selectedGolfers.golfer1Id}
                     onChange={(e) => handleGolferChange('golfer1Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
@@ -330,7 +330,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                     name="golfer2Id" 
                     value={selectedGolfers.golfer2Id}
                     onChange={(e) => handleGolferChange('golfer2Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
@@ -354,7 +354,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                     name="golfer3Id" 
                     value={selectedGolfers.golfer3Id}
                     onChange={(e) => handleGolferChange('golfer3Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
@@ -378,7 +378,7 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
                     name="golfer4Id" 
                     value={selectedGolfers.golfer4Id}
                     onChange={(e) => handleGolferChange('golfer4Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (

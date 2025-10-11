@@ -328,7 +328,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                           <select 
                             name="associateGolfer" 
                             defaultValue={user.golfer?.id || ''}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                           >
                             <option value="">No association</option>
                             {user.golfer && (

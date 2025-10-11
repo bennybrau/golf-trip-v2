@@ -230,7 +230,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     id="round"
                     name="round" 
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select a round</option>
                     {Object.entries(roundLabels).map(([value, label]) => (
@@ -247,7 +247,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     id="course"
                     name="course" 
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select a course</option>
                     <option value="BLACK">Black</option>
@@ -272,7 +272,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                       params.set('year', newYear);
                       window.location.href = `/foursomes/new?${params.toString()}`;
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <option value="2024">2024</option>
                     <option value="2025">2025</option>
@@ -308,7 +308,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     value={selectedGolfers.golfer1Id}
                     onChange={(e) => handleGolferChange('golfer1Id', e.target.value)}
                     disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
@@ -333,7 +333,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     value={selectedGolfers.golfer2Id}
                     onChange={(e) => handleGolferChange('golfer2Id', e.target.value)}
                     disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
@@ -358,7 +358,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     value={selectedGolfers.golfer3Id}
                     onChange={(e) => handleGolferChange('golfer3Id', e.target.value)}
                     disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (
@@ -383,7 +383,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
                     value={selectedGolfers.golfer4Id}
                     onChange={(e) => handleGolferChange('golfer4Id', e.target.value)}
                     disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">Select golfer</option>
                     {golfers.map((golfer: any) => (

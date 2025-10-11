@@ -193,7 +193,7 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
                     name="golferId" 
                     required
                     disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="">
                       {golfers.length === 0 ? "No golfers available" : "Select a golfer"}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Home } from 'lucide-react';
+import { UserCheck, UserX, Home } from 'lucide-react';
 import { Card, CardContent, Button, Spinner } from '../ui';
 
 interface ScoreCardProps {
@@ -73,7 +73,7 @@ export function ScoreCard({
                       defaultValue={golfer.cabin?.toString() || ''}
                       onChange={(e) => e.target.form?.submit()}
                       disabled={updatingCabin}
-                      className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="text-xs px-2 py-1 border border-gray-300 rounded text-gray-900 bg-white focus:outline-none focus:ring-1 focus:ring-green-500"
                     >
                       <option value="">No cabin</option>
                       <option value="1">Cabin 1</option>
@@ -133,9 +133,9 @@ export function ScoreCard({
                       <Spinner size="sm" />
                     </div>
                   ) : isActive ? (
-                    <Eye size={16} />
+                    <UserCheck size={16} />
                   ) : (
-                    <EyeOff size={16} />
+                    <UserX size={16} />
                   )}
                 </Button>
               </form>
