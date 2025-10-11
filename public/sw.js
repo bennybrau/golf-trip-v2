@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golf-trip-d4b4b36';
+const CACHE_NAME = 'golf-trip-0c85c96';
 const STATIC_CACHE_URLS = [
   '/',
   '/manifest.json',
