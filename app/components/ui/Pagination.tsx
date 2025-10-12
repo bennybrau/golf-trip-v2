@@ -93,7 +93,7 @@ export function Pagination({
         {hasPrevPage ? (
           <Link 
             to={buildUrl(currentPage - 1)}
-            className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-sm !text-gray-900 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             ← Previous
           </Link>
@@ -127,7 +127,7 @@ export function Pagination({
               <Link
                 key={page}
                 to={buildUrl(page)}
-                className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-3 py-2 text-sm !text-gray-900 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
               >
                 {page}
               </Link>
@@ -139,7 +139,7 @@ export function Pagination({
         {hasNextPage ? (
           <Link 
             to={buildUrl(currentPage + 1)}
-            className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-sm !text-gray-900 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             Next →
           </Link>
