@@ -3,8 +3,7 @@ import { Form, useActionData, useLoaderData } from 'react-router';
 import { requireAuth } from '../lib/session';
 import { updateUser } from '../lib/auth';
 import { updateProfileSchema } from '../lib/validation';
-import { Navigation } from '../components/Navigation';
-import { Button, Input, Card, CardHeader, CardContent, Alert, Avatar } from '../components/ui';
+import { PageLayout, Button, Input, Card, CardHeader, CardContent, Alert, Avatar } from '../components/ui';
 import { z } from 'zod';
 import type { Route } from './+types/account';
 
@@ -96,10 +95,7 @@ export default function Account() {
   const displayUser = actionData?.user || user;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={displayUser} />
-
-      <main className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout user={displayUser} width="narrow">
         <Card className="shadow-xl">
           <CardHeader>
             <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
@@ -229,7 +225,6 @@ export default function Account() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

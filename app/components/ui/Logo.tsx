@@ -19,7 +19,7 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
   };
 
   return (
-    <div className={`bg-green-600 rounded-full flex items-center justify-center ${sizeClasses[size]} ${className}`.trim()}>
+    <div className={`bg-brand-600 rounded-full flex items-center justify-center ${sizeClasses[size]} ${className}`.trim()}>
       <LandPlot size={iconSizes[size]} color='white' />
     </div>
   );

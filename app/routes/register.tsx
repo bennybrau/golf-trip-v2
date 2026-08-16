@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Form, redirect, useActionData, Link } from 'react-router';
 import { createUser, createSession } from '../lib/auth';
 import { createSessionCookie, getSessionToken } from '../lib/session';
-import { Button, Input, Card, CardContent, Alert, Logo, Spinner } from '../components/ui';
+import { AuthLayout, Input, Button, Alert } from '../components/ui';
 import { prisma } from '../lib/db';
 import { z } from 'zod';
 
@@ -108,100 +108,70 @@ export default function Register() {
   }, [actionData]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-      <div className="max-w-md w-full mx-4">
-        <Card className="shadow-xl">
-          <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <div className="flex justify-center mb-4">
-                <Logo />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
-              <p className="mt-2 text-gray-600">Join Scaletta Golf Trip</p>
-            </div>
+    <AuthLayout
+      title="Create Account"
+      subtitle="Join the Scaletta Golf Trip"
+      footer={
+        <p>
+          Already have an account?{' '}
+          <Link to="/login" className="font-medium text-brand-700 hover:text-brand-800">
+            Sign in
+          </Link>
+        </p>
+      }
+    >
+      <Form method="post" className="space-y-5" onSubmit={handleSubmit}>
+        <Input
+          name="name"
+          type="text"
+          autoComplete="name"
+          label="Full name"
+          required
+          defaultValue={actionData?.values?.name as string}
+          error={actionData?.errors?.name?.[0]}
+        />
+        <Input
+          name="email"
+          type="email"
+          autoComplete="email"
+          label="Email address"
+          required
+          defaultValue={actionData?.values?.email as string}
+          error={actionData?.errors?.email?.[0]}
+        />
+        <Input
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          label="Phone number"
+          placeholder="Optional"
+          defaultValue={actionData?.values?.phone as string}
+          error={actionData?.errors?.phone?.[0]}
+        />
+        <Input
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          label="Password"
+          required
+          error={actionData?.errors?.password?.[0]}
+          helperText="At least 8 characters."
+        />
+        <Input
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          label="Confirm password"
+          required
+          error={actionData?.errors?.confirmPassword?.[0]}
+        />
 
-            <Form method="post" className="space-y-6" onSubmit={handleSubmit}>
-              <Input
-                name="name"
-                type="text"
-                autoComplete="name"
-                label="Full Name"
-                placeholder="Enter your full name"
-                required
-                defaultValue={actionData?.values?.name as string}
-                error={actionData?.errors?.name?.[0]}
-              />
+        {actionData?.error && <Alert variant="error">{actionData.error}</Alert>}
 
-              <Input
-                name="email"
-                type="email"
-                autoComplete="email"
-                label="Email Address"
-                placeholder="Enter your email"
-                required
-                defaultValue={actionData?.values?.email as string}
-                error={actionData?.errors?.email?.[0]}
-              />
-
-              <Input
-                name="phone"
-                type="tel"
-                autoComplete="tel"
-                label="Phone Number (Optional)"
-                placeholder="Enter your phone number"
-                defaultValue={actionData?.values?.phone as string}
-                error={actionData?.errors?.phone?.[0]}
-              />
-
-              <Input
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                label="Password"
-                placeholder="Enter your password"
-                required
-                error={actionData?.errors?.password?.[0]}
-              />
-
-              <Input
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                label="Confirm Password"
-                placeholder="Confirm your password"
-                required
-                error={actionData?.errors?.confirmPassword?.[0]}
-              />
-
-              {actionData?.error && (
-                <Alert variant="error">
-                  {actionData.error}
-                </Alert>
-              )}
-
-              <Button type="submit" fullWidth disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Spinner size="sm" />
-                    Creating Account...
-                  </div>
-                ) : (
-                  'Create Account'
-                )}
-              </Button>
-            </Form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-500">
-                Already have an account?{' '}
-                <Link to="/login" className="text-green-600 hover:text-green-500 font-medium">
-                  Sign in here
-                </Link>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <Button type="submit" fullWidth loading={isSubmitting} loadingText="Creating account...">
+          Create Account
+        </Button>
+      </Form>
+    </AuthLayout>
   );
 }

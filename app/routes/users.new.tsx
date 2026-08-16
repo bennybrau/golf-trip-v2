@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, redirect } from 'react-router';
 import { requireAuth } from '../lib/session';
 import { createUser } from '../lib/auth';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import { PageLayout, Card, CardContent, Button, Input, Spinner } from '../components/ui';
 import { z } from 'zod';
 import type { Route } from './+types/users.new';
 
@@ -101,10 +100,7 @@ export default function NewUser({ loaderData, actionData }: Route.ComponentProps
   }, [actionData]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout user={user} width="form">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Link 
@@ -124,7 +120,7 @@ export default function NewUser({ loaderData, actionData }: Route.ComponentProps
 
         <Card className="relative">
           {isSubmitting && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+            <div className="absolute inset-0 bg-white/75 flex items-center justify-center z-10 rounded-lg">
               <div className="flex items-center gap-3">
                 <Spinner size="lg" />
                 <span className="text-lg font-medium text-gray-700">Creating user...</span>
@@ -177,7 +173,7 @@ export default function NewUser({ loaderData, actionData }: Route.ComponentProps
                   name="isAdmin"
                   id="isAdmin"
                   defaultChecked={actionData?.values?.isAdmin as boolean || false}
-                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
                 />
                 <label htmlFor="isAdmin" className="ml-2 block text-sm text-gray-900">
                   Make this user an admin
@@ -210,7 +206,6 @@ export default function NewUser({ loaderData, actionData }: Route.ComponentProps
             </form>
           </CardContent>
         </Card>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

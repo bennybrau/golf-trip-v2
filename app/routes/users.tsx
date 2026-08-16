@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button } from '../components/ui';
+import { PageLayout, Card, CardContent, Button } from '../components/ui';
 import { UserCard } from '../components/cards';
 import { prisma } from '../lib/db';
 
@@ -107,10 +106,7 @@ export default function Users({ loaderData, actionData }: { loaderData: any, act
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout user={user} width="wide">
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -139,7 +135,7 @@ export default function Users({ loaderData, actionData }: { loaderData: any, act
         )}
         
         {actionData?.success && (
-          <div className="mb-6 text-green-600 text-sm bg-green-50 border border-green-200 rounded-md p-3">
+          <div className="mb-6 text-brand-600 text-sm bg-brand-50 border border-brand-200 rounded-md p-3">
             {actionData.message}
           </div>
         )}
@@ -166,7 +162,6 @@ export default function Users({ loaderData, actionData }: { loaderData: any, act
             ))
           )}
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

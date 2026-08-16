@@ -1,9 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, redirect } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import {
+  PageLayout,
+  PageHeader,
+  Card,
+  CardContent,
+  Button,
+  Input,
+  Select,
+  Label,
+  ActionMessage,
+  YearSelect,
+} from '../components/ui';
 import { prisma } from '../lib/db';
+import { appendYear, resolveYear } from '../lib/season';
+import { getAvailableYears } from '../lib/season.server';
+import { ROUND_LABELS, COURSES } from '../lib/course';
 import { z } from 'zod';
 import type { Route } from './+types/foursomes.new';
 import { parseDateTimeLocal } from '../lib/timeUtils';
@@ -47,20 +60,21 @@ export async function loader({ request }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort');
     const order = url.searchParams.get('order');
-    const year = url.searchParams.get('year') || '2025';
-    
+    const availableYears = await getAvailableYears();
+    const selectedYear = resolveYear(url.searchParams, availableYears);
+
     if (!user.isAdmin) {
       const params = new URLSearchParams();
       if (sort) params.set('sort', sort);
       if (order) params.set('order', order);
-      if (year !== '2025') params.set('year', year);
+      appendYear(params, selectedYear);
       const queryString = params.toString();
       throw redirect(queryString ? `/foursomes?${queryString}` : '/foursomes');
     }
-    
-    const selectedYear = parseInt(year);
-    
-    // Get active golfers for the selected year
+
+    // Only golfers on this season's roster can be put in a foursome, which is
+    // why a season with an empty roster cannot have foursomes created at all --
+    // see the notice rendered below when this list comes back empty.
     const golfers = await prisma.golfer.findMany({
       where: {
         yearlyStatus: {
@@ -72,8 +86,8 @@ export async function loader({ request }: Route.LoaderArgs) {
       },
       orderBy: { name: 'asc' }
     });
-    
-    return { user, golfers, sort, order, year: selectedYear };
+
+    return { user, golfers, sort, order, year: selectedYear, availableYears };
   } catch (response) {
     throw response;
   }
@@ -128,9 +142,9 @@ export async function action({ request }: Route.ActionArgs) {
     const params = new URLSearchParams();
     if (sort) params.set('sort', sort);
     if (order) params.set('order', order);
-    if (validatedData.year !== '2024') params.set('year', validatedData.year);
+    appendYear(params, parseInt(validatedData.year));
     const queryString = params.toString();
-    
+
     return redirect(queryString ? `/foursomes?${queryString}` : '/foursomes');
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -141,7 +155,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function NewFoursome({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfers = [], sort, order, year } = loaderData;
+  const { user, golfers = [], sort, order, year, availableYears } = loaderData;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedGolfers, setSelectedGolfers] = useState({
     golfer1Id: '',
@@ -171,7 +185,7 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
     const params = new URLSearchParams();
     if (sort) params.set('sort', sort);
     if (order) params.set('order', order);
-    if (year !== 2025) params.set('year', year.toString());
+    appendYear(params, year);
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
@@ -187,268 +201,134 @@ export default function NewFoursome({ loaderData, actionData }: Route.ComponentP
     }
   }, [actionData]);
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Link 
-              to={getUrlWithCurrentParams('/foursomes')}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
-            >
-              ← Back to Foursomes
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Create New Foursome
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Set up a new foursome for a round
-          </p>
-        </div>
+  const golferSlots = ['golfer1Id', 'golfer2Id', 'golfer3Id', 'golfer4Id'] as const;
 
-        <Card className="relative">
-          {isSubmitting && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Spinner size="lg" />
-                <span className="text-lg font-medium text-gray-700">Creating foursome...</span>
+  return (
+    <PageLayout user={user} width="form">
+      <Link
+        to={getUrlWithCurrentParams('/foursomes')}
+        className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"
+      >
+        &larr; Back to Foursomes
+      </Link>
+
+      <PageHeader title="Add Foursome" subtitle={`Schedule a group for the ${year} trip`} />
+
+      <Card>
+        <CardContent className="py-5">
+          <form method="post" className="space-y-6" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select id="round" name="round" label="Round" required>
+                <option value="">Select a round</option>
+                {Object.entries(ROUND_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+
+              <Select id="course" name="course" label="Course" required>
+                <option value="">Select a course</option>
+                {Object.entries(COURSES).map(([value, info]) => (
+                  <option key={value} value={value}>
+                    {info.label} &mdash; par {info.par}, {info.yardage.toLocaleString()} yds
+                  </option>
+                ))}
+              </Select>
+
+              <Input
+                id="teeTime"
+                name="teeTime"
+                type="datetime-local"
+                label="Tee time"
+                required
+                helperText="Eastern Time (ET)"
+              />
+
+              <div className="space-y-1.5">
+                <Label>Season</Label>
+                {/* Changing the season re-filters the golfer pickers, so this
+                    navigates. The hidden input is what the action reads. */}
+                <input type="hidden" name="year" value={year} />
+                <YearSelect years={availableYears} value={year} label={null} />
               </div>
             </div>
-          )}
-          
-          <CardContent className="p-6">
-            <form method="post" className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label htmlFor="round" className="block text-sm font-medium text-gray-700 mb-2">
-                    Round *
-                  </label>
-                  <select 
-                    id="round"
-                    name="round" 
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+
+            <fieldset>
+              <legend className="text-sm font-medium text-gray-700 mb-2">Players</legend>
+              {/* Single column below sm: two selects side by side at 390px
+                  truncated golfer names to nothing. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {golferSlots.map((slot, index) => (
+                  <Select
+                    key={slot}
+                    id={slot}
+                    name={slot}
+                    aria-label={`Player ${index + 1}`}
+                    value={selectedGolfers[slot]}
+                    onChange={(event) => handleGolferChange(slot, event.target.value)}
+                    disabled={golfers.length === 0}
                   >
-                    <option value="">Select a round</option>
-                    {Object.entries(roundLabels).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
+                    <option value="">Player {index + 1}</option>
+                    {golfers.map((golfer: any) => (
+                      <option
+                        key={golfer.id}
+                        value={golfer.id}
+                        disabled={isGolferDisabled(golfer.id, slot)}
+                      >
+                        {golfer.name}
+                      </option>
                     ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-2">
-                    Course *
-                  </label>
-                  <select 
-                    id="course"
-                    name="course" 
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Select a course</option>
-                    <option value="BLACK">Black</option>
-                    <option value="SILVER">Silver</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">
-                    Year *
-                  </label>
-                  <select 
-                    id="year"
-                    name="year" 
-                    required
-                    value={year}
-                    onChange={(e) => {
-                      const newYear = e.target.value;
-                      const params = new URLSearchParams();
-                      if (sort) params.set('sort', sort);
-                      if (order) params.set('order', order);
-                      params.set('year', newYear);
-                      window.location.href = `/foursomes/new?${params.toString()}`;
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                  </select>
-                </div>
+                  </Select>
+                ))}
               </div>
+            </fieldset>
 
-              <div>
-                <label htmlFor="teeTime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tee Time * <span className="text-xs font-normal text-gray-500">(Eastern Time)</span>
-                </label>
-                <Input 
-                  id="teeTime"
-                  name="teeTime" 
-                  type="datetime-local" 
-                  required
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  All tee times are in Eastern Time (ET)
+            {golfers.length === 0 && (
+              <div className="rounded-control border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-medium">No golfers on the {year} roster.</p>
+                <p className="mt-1">
+                  A foursome needs at least one golfer, so the {year} season has to be set up first.
                 </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="golfer1Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 1
-                  </label>
-                  <select 
-                    id="golfer1Id"
-                    name="golfer1Id" 
-                    value={selectedGolfers.golfer1Id}
-                    onChange={(e) => handleGolferChange('golfer1Id', e.target.value)}
-                    disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select golfer</option>
-                    {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
-                        value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer1Id')}
-                      >
-                        {golfer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="golfer2Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 2
-                  </label>
-                  <select 
-                    id="golfer2Id"
-                    name="golfer2Id" 
-                    value={selectedGolfers.golfer2Id}
-                    onChange={(e) => handleGolferChange('golfer2Id', e.target.value)}
-                    disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select golfer</option>
-                    {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
-                        value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer2Id')}
-                      >
-                        {golfer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="golfer3Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 3
-                  </label>
-                  <select 
-                    id="golfer3Id"
-                    name="golfer3Id" 
-                    value={selectedGolfers.golfer3Id}
-                    onChange={(e) => handleGolferChange('golfer3Id', e.target.value)}
-                    disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select golfer</option>
-                    {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
-                        value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer3Id')}
-                      >
-                        {golfer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="golfer4Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 4
-                  </label>
-                  <select 
-                    id="golfer4Id"
-                    name="golfer4Id" 
-                    value={selectedGolfers.golfer4Id}
-                    onChange={(e) => handleGolferChange('golfer4Id', e.target.value)}
-                    disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select golfer</option>
-                    {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
-                        value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer4Id')}
-                      >
-                        {golfer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              {golfers.length === 0 && (
-                <p className="text-sm text-orange-600 bg-orange-50 border border-orange-200 rounded-md p-3">
-                  No active golfers found for {year}. You need to add golfers for this year before creating foursomes. 
-                  <Link to={`/scores?year=${year}`} className="underline hover:text-orange-800 ml-1">
-                    Manage golfers for {year} here
-                  </Link>
-                </p>
-              )}
-              
-              <div>
-                <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-2">
-                  Score (strokes above/below par)
-                </label>
-                <Input 
-                  id="score"
-                  name="score" 
-                  type="number" 
-                  placeholder="e.g., -2 (under par) or +5 (over par)"
-                  defaultValue="0"
-                  className="w-full"
-                />
-              </div>
-
-              {actionData?.error && (
-                <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-                  {actionData.error}
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={isSubmitting || golfers.length === 0}>
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <Spinner size="sm" />
-                      Creating Foursome...
-                    </div>
-                  ) : (
-                    'Create Foursome'
-                  )}
-                </Button>
-                <Link to={getUrlWithCurrentParams('/foursomes')}>
-                  <Button type="button" variant="secondary">
-                    Cancel
-                  </Button>
+                <Link
+                  to="/admin/season"
+                  className="mt-2 inline-block font-medium underline underline-offset-2"
+                >
+                  Set up the {year} season &rarr;
                 </Link>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+            )}
+
+            <Input
+              id="score"
+              name="score"
+              type="number"
+              label="Team score"
+              defaultValue="0"
+              placeholder="e.g. -2"
+              helperText="Strokes relative to par for the group. Leave at 0 until the round is played."
+            />
+
+            <ActionMessage actionData={actionData} className="" />
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+              <Link to={getUrlWithCurrentParams('/foursomes')} className="sm:w-auto">
+                <Button type="button" variant="secondary" fullWidth>
+                  Cancel
+                </Button>
+              </Link>
+              <Button
+                type="submit"
+                disabled={golfers.length === 0}
+                loading={isSubmitting}
+                loadingText="Creating..."
+              >
+                Create Foursome
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageLayout>
   );
 }

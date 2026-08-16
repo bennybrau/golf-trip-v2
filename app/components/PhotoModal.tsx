@@ -71,7 +71,7 @@ export function PhotoModal({ selectedPhoto, photos, onClose, onSelectPhoto }: Ph
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       {/* Close button */}
@@ -89,7 +89,7 @@ export function PhotoModal({ selectedPhoto, photos, onClose, onSelectPhoto }: Ph
             e.stopPropagation();
             goToPreviousPhoto();
           }}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10 bg-black/50 rounded-full p-2"
         >
           <ChevronLeft size={32} />
         </button>
@@ -102,7 +102,7 @@ export function PhotoModal({ selectedPhoto, photos, onClose, onSelectPhoto }: Ph
             e.stopPropagation();
             goToNextPhoto();
           }}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 z-10 bg-black/50 rounded-full p-2"
         >
           <ChevronRight size={32} />
         </button>
@@ -126,7 +126,7 @@ export function PhotoModal({ selectedPhoto, photos, onClose, onSelectPhoto }: Ph
               </span>
             )}
             {/* Photo counter - positioned in caption area */}
-            <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+            <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
               {getCurrentPhotoIndex() + 1} of {photos.length}
             </div>
           </div>
@@ -134,7 +134,7 @@ export function PhotoModal({ selectedPhoto, photos, onClose, onSelectPhoto }: Ph
         
         {/* Photo counter for images without captions */}
         {!selectedPhoto.caption && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm">
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded text-sm">
             {getCurrentPhotoIndex() + 1} of {photos.length}
           </div>
         )}

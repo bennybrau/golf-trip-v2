@@ -1,5 +1,4 @@
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent } from '../components/ui';
+import { PageLayout, Card, CardContent } from '../components/ui';
 import { requireAuth } from '../lib/session';
 import type { Route } from './+types/home';
 
@@ -23,10 +22,7 @@ export default function Install({ loaderData }: Route.ComponentProps) {
   const { user } = loaderData;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout user={user} width="narrow">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Install Golf Trip App
@@ -131,13 +127,13 @@ export default function Install({ loaderData }: Route.ComponentProps) {
         </div>
 
         <div className="mt-8">
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-brand-200 bg-brand-50">
             <CardContent className="p-6">
               <div className="flex items-start space-x-3">
                 <div className="text-2xl">✨</div>
                 <div>
-                  <h3 className="font-semibold text-green-900 mb-2">Benefits of Installing</h3>
-                  <ul className="text-sm text-green-800 space-y-1">
+                  <h3 className="font-semibold text-brand-900 mb-2">Benefits of Installing</h3>
+                  <ul className="text-sm text-brand-800 space-y-1">
                     <li>• Quick access from your home screen</li>
                     <li>• Full-screen app experience</li>
                     <li>• Faster loading times</li>
@@ -148,7 +144,6 @@ export default function Install({ loaderData }: Route.ComponentProps) {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

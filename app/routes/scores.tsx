@@ -1,11 +1,26 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button } from '../components/ui';
+import {
+  PageLayout,
+  PageHeader,
+  Button,
+  YearSelect,
+  SortChips,
+  ActionMessage,
+  EmptyState,
+  type SortOption,
+} from '../components/ui';
 import { ScoreCard } from '../components/cards';
 import { prisma } from '../lib/db';
+import { appendYear, resolveYear } from '../lib/season';
+import { getAvailableYears } from '../lib/season.server';
 import type { Route } from './+types/scores';
+
+const SORT_OPTIONS: readonly SortOption[] = [
+  { value: 'score', label: 'Score' },
+  { value: 'name', label: 'Name' },
+  { value: 'rounds', label: 'Rounds' },
+];
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -22,15 +37,15 @@ export async function loader({ request }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort') || 'score';
     const order = url.searchParams.get('order') || 'asc';
-    const year = url.searchParams.get('year') || '2025';
-    
+
     // Define valid sort options
     const validSorts = ['name', 'score', 'rounds'];
     const validOrders = ['asc', 'desc'];
-    
+
     const sortBy = validSorts.includes(sort) ? sort : 'score';
     const sortOrder = validOrders.includes(order) ? order : 'asc';
-    const selectedYear = parseInt(year);
+    const availableYears = await getAvailableYears();
+    const selectedYear = resolveYear(url.searchParams, availableYears);
     
     // Get golfers with their yearly status and foursomes for the selected year
     const golfers = await prisma.golfer.findMany({
@@ -111,7 +126,24 @@ export async function loader({ request }: Route.LoaderArgs) {
       });
     }
     
-    return { user, golfers: golfersWithScores, currentSort: sortBy, currentOrder: sortOrder, selectedYear };
+    // Rounds actually scheduled for this season, so the scoreboard can flag
+    // golfers who played fewer -- with a plain sum, missing a round quietly
+    // flatters a player's total.
+    const roundsThisYear = await prisma.foursome.findMany({
+      where: { year: selectedYear },
+      select: { round: true },
+      distinct: ['round'],
+    });
+
+    return {
+      user,
+      golfers: golfersWithScores,
+      currentSort: sortBy,
+      currentOrder: sortOrder,
+      selectedYear,
+      availableYears,
+      roundsScheduled: roundsThisYear.length,
+    };
   } catch (response) {
     throw response;
   }
@@ -142,26 +174,28 @@ export async function action({ request }: Route.ActionArgs) {
         return { error: "Golfer not found" };
       }
 
-      // Find the yearly status record
-      const yearlyStatus = await prisma.golferStatus.findUnique({
+      // Upsert rather than update: a golfer with no status row for this year is
+      // simply not on that year's roster yet, and toggling them active is the
+      // natural way to add them. This previously errored with "Golfer status not
+      // found for this year", which left admins with no in-app remedy -- the
+      // only workaround was opening the golfer's edit page, whose loader created
+      // the row as a side effect of a GET.
+      await prisma.golferStatus.upsert({
         where: {
           golferId_year: {
             golferId,
             year
           }
-        }
+        },
+        create: {
+          golferId,
+          year,
+          isActive: !currentStatus,
+          cabin: null
+        },
+        update: { isActive: !currentStatus }
       });
 
-      if (!yearlyStatus) {
-        return { error: "Golfer status not found for this year" };
-      }
-
-      // Update the yearly status
-      await prisma.golferStatus.update({
-        where: { id: yearlyStatus.id },
-        data: { isActive: !currentStatus }
-      });
-      
       const newStatus = !currentStatus;
       const statusText = newStatus ? 'activated' : 'deactivated';
       return { success: true, message: `Golfer ${statusText} for ${year}` };
@@ -225,126 +259,83 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Scores({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfers, currentSort, currentOrder, selectedYear } = loaderData;
-  
-  const getSortUrl = (sortBy: string) => {
-    const newOrder = currentSort === sortBy && currentOrder === 'asc' ? 'desc' : 'asc';
-    const params = new URLSearchParams();
-    params.set('sort', sortBy);
-    params.set('order', newOrder);
-    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
-    return `/scores?${params.toString()}`;
-  };
-  
-  const getSortIcon = (sortBy: string) => {
-    if (currentSort !== sortBy) {
-      return '↕️'; // Both directions when not sorted by this column
-    }
-    return currentOrder === 'asc' ? '↑' : '↓';
-  };
+  const { user, golfers, currentSort, currentOrder, selectedYear, availableYears, roundsScheduled } =
+    loaderData;
+
+  // Leaderboard rank is by score regardless of the active sort, so switching to
+  // sort-by-name does not renumber people into a meaningless order.
+  const rankByGolferId = new Map<string, number>();
+  [...golfers]
+    .filter((g: any) => g.totalScore !== null)
+    .sort((a: any, b: any) => a.totalScore - b.totalScore)
+    .forEach((g: any, index: number) => rankByGolferId.set(g.id, index + 1));
+
+  const scoredCount = rankByGolferId.size;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Tournament Scores
-              </h1>
-              <p className="text-gray-600">
-                View scores and standings for each tournament year
-              </p>
-            </div>
-          </div>
-          
-          {/* Year and Sort Controls */}
-          <div className="mt-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            {/* Year Selector */}
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-gray-800 font-medium">Year:</span>
-              <select 
-                value={selectedYear}
-                onChange={(e) => {
-                  const newYear = e.target.value;
-                  const params = new URLSearchParams();
-                  params.set('year', newYear);
-                  if (currentSort !== 'score') params.set('sort', currentSort);
-                  if (currentOrder !== 'asc') params.set('order', currentOrder);
-                  window.location.href = `/scores?${params.toString()}`;
-                }}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
-            
-            {/* Sort Controls */}
+    <PageLayout user={user}>
+      <PageHeader
+        title="Tournament Scores"
+        subtitle={
+          scoredCount > 0
+            ? `${scoredCount} of ${golfers.length} golfers have played. Lowest total wins.`
+            : `Standings for the ${selectedYear} trip. Lowest total wins.`
+        }
+        controls={
+          <>
+            <YearSelect years={availableYears} value={selectedYear} />
             {golfers.length > 0 && (
-              <div className="flex gap-2 items-center">
-                <span className="text-sm text-gray-800 font-medium">Sort by:</span>
-                <Link 
-                  to={getSortUrl('name')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Name {getSortIcon('name')}
-                </Link>
-                <Link 
-                  to={getSortUrl('score')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Score {getSortIcon('score')}
-                </Link>
-                <Link 
-                  to={getSortUrl('rounds')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Rounds {getSortIcon('rounds')}
-                </Link>
-              </div>
+              <SortChips
+                options={SORT_OPTIONS}
+                currentSort={currentSort}
+                currentOrder={currentOrder}
+                defaultSort="score"
+              />
             )}
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {/* Action Messages */}
-        {actionData?.error && (
-          <div className="mb-6 text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-            {actionData.error}
-          </div>
-        )}
-        
-        {actionData?.success && (
-          <div className="mb-6 text-green-600 text-sm bg-green-50 border border-green-200 rounded-md p-3">
-            {actionData.message}
-          </div>
-        )}
+      <ActionMessage actionData={actionData} />
 
-        {/* Scores List */}
-        <div className="grid gap-4">
-          {golfers.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-gray-500">
-                  No golfers found for {selectedYear}. Add golfers to the tournament to see scores!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            golfers.map((golfer: any) => (
+      {golfers.length === 0 ? (
+        <EmptyState
+          icon="⛳"
+          title={`No golfers on the ${selectedYear} roster`}
+          description={
+            user.isAdmin
+              ? `Set up the ${selectedYear} season to copy last year's roster forward, then scores will appear here.`
+              : `The ${selectedYear} roster hasn't been set up yet. Check back soon.`
+          }
+          action={
+            user.isAdmin ? (
+              <Link to="/admin/season">
+                <Button size="sm">Set up {selectedYear}</Button>
+              </Link>
+            ) : undefined
+          }
+        />
+      ) : (
+        <>
+          <div className="grid gap-3">
+            {golfers.map((golfer: any) => (
               <ScoreCard
                 key={golfer.id}
                 golfer={golfer}
                 user={user}
                 selectedYear={selectedYear}
+                roundsScheduled={roundsScheduled}
+                rank={rankByGolferId.get(golfer.id) ?? null}
               />
-            ))
-          )}
-        </div>
-      </main>
-    </div>
+            ))}
+          </div>
+
+          <p className="mt-6 text-xs text-gray-500">
+            Each foursome plays as a team, so a round&rsquo;s score counts for every player in that
+            group. Players rotate groups between rounds, so totals still differ.
+          </p>
+        </>
+      )}
+    </PageLayout>
   );
 }

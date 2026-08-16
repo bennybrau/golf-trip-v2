@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, redirect } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import { Textarea, Select, PageLayout, Card, CardContent, Button, Input, Spinner } from '../components/ui';
 import { prisma } from '../lib/db';
 import { cloudflareImages } from '../lib/cloudflare';
 import type { Route } from './+types/champions.new';
@@ -134,10 +133,7 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
   }, [actionData]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout user={user} width="form">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Link 
@@ -157,7 +153,7 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
 
         <Card className="relative">
           {isSubmitting && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+            <div className="absolute inset-0 bg-white/75 flex items-center justify-center z-10 rounded-lg">
               <div className="flex items-center gap-3">
                 <Spinner size="lg" />
                 <span className="text-lg font-medium text-gray-700">Adding champion...</span>
@@ -169,7 +165,7 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
             <form method="post" encType="multipart/form-data" className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Tournament Year *
                   </label>
                   <Input 
@@ -185,15 +181,15 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
                 </div>
                 
                 <div>
-                  <label htmlFor="golferId" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="golferId" className="block text-sm font-medium text-gray-700 mb-1.5">
                     Champion Golfer *
                   </label>
-                  <select 
+                  <Select 
                     id="golferId"
                     name="golferId" 
                     required
                     disabled={golfers.length === 0}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    
                   >
                     <option value="">
                       {golfers.length === 0 ? "No golfers available" : "Select a golfer"}
@@ -203,7 +199,7 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
                         {golfer.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {golfers.length === 0 && (
                     <p className="text-sm text-orange-600 mt-1">
                       You need to add golfers before creating champions. 
@@ -216,7 +212,7 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
               </div>
               
               <div>
-                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Display Name (Optional)
                 </label>
                 <Input 
@@ -236,60 +232,60 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
                 <h3 className="text-lg font-medium text-gray-900">Champion Questions (Optional)</h3>
                 
                 <div>
-                  <label htmlFor="motivation" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="motivation" className="block text-sm font-medium text-gray-700 mb-1.5">
                     What was your motivation?
                   </label>
-                  <textarea 
+                  <Textarea 
                     id="motivation"
                     name="motivation" 
                     rows={3}
                     placeholder="Share what motivated you during the tournament..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="meaning" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="meaning" className="block text-sm font-medium text-gray-700 mb-1.5">
                     What does becoming a champion mean to you?
                   </label>
-                  <textarea 
+                  <Textarea 
                     id="meaning"
                     name="meaning" 
                     rows={3}
                     placeholder="Describe what this championship means to you..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="lifeChange" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="lifeChange" className="block text-sm font-medium text-gray-700 mb-1.5">
                     How has your life changed since winning?
                   </label>
-                  <textarea 
+                  <Textarea 
                     id="lifeChange"
                     name="lifeChange" 
                     rows={3}
                     placeholder="Share how winning has impacted your life..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="favoriteQuote" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="favoriteQuote" className="block text-sm font-medium text-gray-700 mb-1.5">
                     What is your favorite quote?
                   </label>
-                  <textarea 
+                  <Textarea 
                     id="favoriteQuote"
                     name="favoriteQuote" 
                     rows={2}
                     placeholder="Share a quote that inspires you..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="photo" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="photo" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Champion Photo (Optional)
                 </label>
                 <Input 
@@ -330,7 +326,6 @@ export default function NewChampion({ loaderData, actionData }: Route.ComponentP
             </form>
           </CardContent>
         </Card>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

@@ -84,17 +84,17 @@ export function InstallPromptSimple() {
   if (!mounted || !showPrompt) return null;
 
   return (
-    <Card className="mb-6 border-green-200 bg-green-50">
+    <Card className="mb-6 border-brand-200 bg-brand-50">
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0 text-2xl">📱</div>
           <div className="flex-1">
-            <h3 className="font-semibold text-green-900 mb-2">
+            <h3 className="font-semibold text-brand-900 mb-2">
               Add Golf Trip to Home Screen
             </h3>
             
             {deviceType === 'ios' && (
-              <div className="text-sm text-green-800 space-y-2">
+              <div className="text-sm text-brand-800 space-y-2">
                 <p>Get quick access to Golf Trip:</p>
                 <ol className="list-decimal list-inside space-y-1 pl-2">
                   <li>Tap the Share button <span className="inline-block w-4 h-4 text-blue-600">📤</span> in Safari</li>
@@ -105,13 +105,13 @@ export function InstallPromptSimple() {
             )}
             
             {deviceType === 'android' && (
-              <div className="text-sm text-green-800">
+              <div className="text-sm text-brand-800">
                 <p>Install Golf Trip as an app for quick access.</p>
               </div>
             )}
             
             {deviceType === 'desktop' && (
-              <div className="text-sm text-green-800">
+              <div className="text-sm text-brand-800">
                 <p>Install Golf Trip for quick desktop access.</p>
               </div>
             )}
@@ -122,14 +122,14 @@ export function InstallPromptSimple() {
               <Button 
                 onClick={handleInstall}
                 size="sm"
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-brand-600 hover:bg-brand-700"
               >
                 Install
               </Button>
             )}
             <button 
               onClick={handleDismiss}
-              className="text-xs text-green-600 hover:text-green-800 underline"
+              className="text-xs text-brand-600 hover:text-brand-800 underline"
             >
               Not now
             </button>

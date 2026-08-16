@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, redirect } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import { PageLayout, PageHeader, Card, CardContent, Button, Input, Select, ActionMessage } from '../components/ui';
 import { prisma } from '../lib/db';
+import { appendYear, resolveYear } from '../lib/season';
+import { getAvailableYears } from '../lib/season.server';
 import { z } from 'zod';
 import type { Route } from './+types/golfers.$id.edit';
 
@@ -44,9 +45,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort');
     const order = url.searchParams.get('order');
-    const year = url.searchParams.get('year') || '2025';
-    const selectedYear = parseInt(year);
-    
+    const availableYears = await getAvailableYears();
+    const selectedYear = resolveYear(url.searchParams, availableYears);
+
     // Get the golfer to edit with yearly status
     const golfer = await prisma.golfer.findUnique({
       where: { id: golferId },
@@ -56,26 +57,20 @@ export async function loader({ request, params }: Route.LoaderArgs) {
         }
       }
     });
-    
+
     if (!golfer) {
       throw new Response("Golfer not found", { status: 404 });
     }
-    
-    // Get or create yearly status for editing
-    let yearlyStatus = golfer.yearlyStatus[0];
-    if (!yearlyStatus) {
-      // Create yearly status if it doesn't exist
-      yearlyStatus = await prisma.golferStatus.create({
-        data: {
-          golferId: golfer.id,
-          year: selectedYear,
-          isActive: true,
-          cabin: null
-        }
-      });
-    }
-    
-    return { user, golfer, yearlyStatus, sort, order, selectedYear };
+
+    // Read-only: a loader must never mutate. This previously CREATED the missing
+    // GolferStatus row, so merely opening this page (or a link prefetch, or a
+    // crawler) put the golfer on that season's roster. Since /golfers does not
+    // thread ?year= into its Edit links, that also meant every edit-page visit
+    // silently wrote a row for the default season. Absence is now reported to the
+    // component, which offers an explicit "add to roster" action instead.
+    const yearlyStatus = golfer.yearlyStatus[0] ?? null;
+
+    return { user, golfer, yearlyStatus, sort, order, selectedYear, availableYears };
   } catch (response) {
     throw response;
   }
@@ -91,8 +86,24 @@ export async function action({ request, params }: Route.ActionArgs) {
   const golferId = params.id;
   const formData = await request.formData();
   const url = new URL(request.url);
-  const selectedYear = parseInt(url.searchParams.get('year') || '2025');
-  
+  const selectedYear = resolveYear(url.searchParams);
+
+  // Explicit replacement for the loader's former side-effecting create.
+  if (formData.get('_action') === 'add-to-roster') {
+    const golfer = await prisma.golfer.findUnique({ where: { id: golferId } });
+    if (!golfer) {
+      return { error: "Golfer not found" };
+    }
+
+    await prisma.golferStatus.upsert({
+      where: { golferId_year: { golferId, year: selectedYear } },
+      create: { golferId, year: selectedYear, isActive: true, cabin: null },
+      update: { isActive: true },
+    });
+
+    return { success: true, message: `${golfer.name} added to the ${selectedYear} roster` };
+  }
+
   const data = {
     name: formData.get('name') as string,
     email: formData.get('email') as string || undefined,
@@ -160,8 +171,8 @@ export async function action({ request, params }: Route.ActionArgs) {
     const redirectParams = new URLSearchParams();
     if (sort && sort !== 'createdAt') redirectParams.set('sort', sort);
     if (order && order !== 'desc') redirectParams.set('order', order);
-    if (selectedYear !== 2025) redirectParams.set('year', selectedYear.toString());
-    
+    appendYear(redirectParams, selectedYear);
+
     const redirectUrl = redirectParams.toString() ? `/golfers?${redirectParams.toString()}` : '/golfers';
     return redirect(redirectUrl);
   } catch (error) {
@@ -176,15 +187,16 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function EditGolfer({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, golfer, sort, order, selectedYear } = loaderData;
+  const { user, golfer, yearlyStatus, sort, order, selectedYear } = loaderData;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const isOnRoster = yearlyStatus !== null;
+
   // Generate back URL with preserved search parameters
   const getBackUrl = () => {
     const params = new URLSearchParams();
     if (sort && sort !== 'createdAt') params.set('sort', sort);
     if (order && order !== 'desc') params.set('order', order);
-    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
+    appendYear(params, selectedYear);
     const queryString = params.toString();
     return queryString ? `/golfers?${queryString}` : '/golfers';
   };
@@ -201,127 +213,89 @@ export default function EditGolfer({ loaderData, actionData }: Route.ComponentPr
   }, [actionData]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Link 
-              to={getBackUrl()}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
-            >
-              ← Back to Golfers
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Edit Golfer
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Update {golfer.name}'s profile
+    <PageLayout user={user} width="form">
+      <Link
+        to={getBackUrl()}
+        className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"
+      >
+        &larr; Back to Golfers
+      </Link>
+
+      <PageHeader title="Edit Golfer" subtitle={`Update ${golfer.name}’s details`} />
+
+      {!isOnRoster && (
+        <div className="mb-6 rounded-control border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm text-amber-900">
+            <span className="font-medium">
+              {golfer.name} isn&rsquo;t on the {selectedYear} roster.
+            </span>{' '}
+            Cabin assignment is unavailable until they are added, and they won&rsquo;t appear on the{' '}
+            {selectedYear} scoreboard or in foursome pickers.
           </p>
+          <form method="post" className="mt-3">
+            <input type="hidden" name="_action" value="add-to-roster" />
+            <Button type="submit" size="sm">
+              Add to {selectedYear} roster
+            </Button>
+          </form>
         </div>
+      )}
 
-        <Card className="relative">
-          {isSubmitting && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Spinner size="lg" />
-                <span className="text-lg font-medium text-gray-700">Updating golfer...</span>
-              </div>
-            </div>
-          )}
-          
-          <CardContent className="p-6">
-            <form method="post" className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Name *
-                </label>
-                <Input 
-                  id="name"
-                  name="name" 
-                  type="text" 
-                  required
-                  defaultValue={golfer.name}
-                  className="w-full"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <Input 
-                  id="email"
-                  name="email" 
-                  type="email" 
-                  defaultValue={golfer.email || ''}
-                  className="w-full"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone
-                </label>
-                <Input 
-                  id="phone"
-                  name="phone" 
-                  type="tel" 
-                  defaultValue={golfer.phone || ''}
-                  className="w-full"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="cabin" className="block text-sm font-medium text-gray-700 mb-2">
-                  Cabin (Optional)
-                </label>
-                <select 
-                  id="cabin"
-                  name="cabin" 
-                  defaultValue={loaderData.yearlyStatus?.cabin?.toString() || ''}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="">Select a cabin</option>
-                  <option value="1">Cabin 1</option>
-                  <option value="2">Cabin 2</option>
-                  <option value="3">Cabin 3</option>
-                  <option value="4">Cabin 4</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Assign the golfer to a cabin (1-4)
-                </p>
-              </div>
+      <ActionMessage actionData={actionData} />
 
-              {actionData?.error && (
-                <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-                  {actionData.error}
-                </div>
-              )}
+      <Card>
+        <CardContent className="py-5">
+          <form method="post" className="space-y-5" onSubmit={handleSubmit}>
+            <Input id="name" name="name" label="Name" required defaultValue={golfer.name} />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              label="Email"
+              defaultValue={golfer.email ?? ''}
+              placeholder="Optional"
+            />
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              label="Phone"
+              defaultValue={golfer.phone ?? ''}
+              placeholder="Optional"
+            />
 
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <Spinner size="sm" />
-                      Updating Golfer...
-                    </div>
-                  ) : (
-                    'Update Golfer'
-                  )}
+            <Select
+              id="cabin"
+              name="cabin"
+              label={`Cabin for ${selectedYear}`}
+              defaultValue={yearlyStatus?.cabin?.toString() ?? ''}
+              disabled={!isOnRoster}
+              helperText={
+                isOnRoster
+                  ? 'Cabins are assigned per season.'
+                  : `Add ${golfer.name} to the ${selectedYear} roster first.`
+              }
+            >
+              <option value="">No cabin</option>
+              <option value="1">Cabin 1</option>
+              <option value="2">Cabin 2</option>
+              <option value="3">Cabin 3</option>
+              <option value="4">Cabin 4</option>
+            </Select>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+              <Link to={getBackUrl()}>
+                <Button type="button" variant="secondary" fullWidth>
+                  Cancel
                 </Button>
-                <Link to={getBackUrl()}>
-                  <Button type="button" variant="secondary">
-                    Cancel
-                  </Button>
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+              </Link>
+              <Button type="submit" loading={isSubmitting} loadingText="Saving...">
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageLayout>
   );
 }

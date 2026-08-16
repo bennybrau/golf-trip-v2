@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { cn } from '../../lib/cn';
 
 interface PaginationProps {
   currentPage: number;
@@ -77,34 +78,44 @@ export function Pagination({
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
+  // Shared chip geometry. min-h-11 meets the 44px touch target; these were
+  // ~34px tall before. No `!important` needed now that cn() resolves conflicts.
+  const chip =
+    'inline-flex items-center justify-center px-3 py-2 min-h-11 text-sm rounded-control border transition-colors';
+  const chipEnabled = 'text-gray-900 bg-white border-gray-300 hover:bg-gray-50';
+  const chipDisabled = 'text-gray-400 bg-gray-100 border-gray-300 cursor-default';
+
   if (totalPages <= 1) {
     return (
-      <div className={`text-center text-sm text-gray-600 ${className}`}>
+      <div className={cn('text-center text-sm text-gray-600', className)}>
         Showing {totalItems} {totalItems === 1 ? 'item' : 'items'}
       </div>
     );
   }
 
   return (
-    <div className={`flex flex-col items-center gap-4 ${className}`}>
-      {/* Pagination Controls */}
-      <div className="flex items-center gap-2">
+    <div className={cn('flex flex-col items-center gap-4', className)}>
+      {/* Pagination Controls. flex-wrap is required: at 390px a "Previous"
+          button, up to seven page chips and a "Next" button overflowed the
+          viewport horizontally. */}
+      <nav className="flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
         {/* Previous Page */}
         {hasPrevPage ? (
           <Link 
             to={buildUrl(currentPage - 1)}
-            className="px-3 py-2 text-sm !text-gray-900 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className={cn(chip, chipEnabled)}
+            aria-label="Previous page"
           >
             ← Previous
           </Link>
         ) : (
-          <span className="px-3 py-2 text-sm text-gray-400 border border-gray-300 rounded-md bg-gray-100">
+          <span className={cn(chip, chipDisabled)} aria-disabled="true">
             ← Previous
           </span>
         )}
 
         {/* Page Numbers */}
-        <div className="flex gap-1">
+        <div className="flex flex-wrap justify-center gap-1">
           {getVisiblePages().map((page, index) => {
             if (page === 'ellipsis') {
               return (
@@ -119,7 +130,8 @@ export function Pagination({
             return isCurrentPage ? (
               <span
                 key={page}
-                className="px-3 py-2 text-sm bg-green-600 text-white rounded-md font-medium"
+                className={cn(chip, 'bg-brand-600 text-white border-brand-600 font-medium')}
+                aria-current="page"
               >
                 {page}
               </span>
@@ -127,7 +139,8 @@ export function Pagination({
               <Link
                 key={page}
                 to={buildUrl(page)}
-                className="px-3 py-2 text-sm !text-gray-900 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className={cn(chip, chipEnabled)}
+                aria-label={`Page ${page}`}
               >
                 {page}
               </Link>
@@ -139,16 +152,17 @@ export function Pagination({
         {hasNextPage ? (
           <Link 
             to={buildUrl(currentPage + 1)}
-            className="px-3 py-2 text-sm !text-gray-900 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className={cn(chip, chipEnabled)}
+            aria-label="Next page"
           >
             Next →
           </Link>
         ) : (
-          <span className="px-3 py-2 text-sm text-gray-400 border border-gray-300 rounded-md bg-gray-100">
+          <span className={cn(chip, chipDisabled)} aria-disabled="true">
             Next →
           </span>
         )}
-      </div>
+      </nav>
 
       {/* Pagination Info */}
       <div className="text-center text-sm text-gray-600">

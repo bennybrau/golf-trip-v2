@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Link, redirect } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import {
+  PageLayout,
+  PageHeader,
+  Card,
+  CardContent,
+  Button,
+  Input,
+  Select,
+  Badge,
+  ActionMessage,
+} from '../components/ui';
 import { prisma } from '../lib/db';
+import { appendYear } from '../lib/season';
+import { ROUND_LABELS, COURSES, COURSE_LABELS } from '../lib/course';
 import { z } from 'zod';
 import type { Route } from './+types/foursomes.$id.edit';
 import { parseDateTimeLocal, formatDateTimeLocal } from '../lib/timeUtils';
@@ -145,12 +156,16 @@ export async function action({ request, params }: Route.ActionArgs) {
       }
     });
     
-    // Preserve URL parameters when redirecting back
+    // Preserve URL parameters when redirecting back. The foursome's own year is
+    // used rather than a URL param: a foursome's season cannot be changed here,
+    // and omitting it previously bounced an admin editing a 2024 round back to
+    // the current season's list.
     const params = new URLSearchParams();
     if (sort) params.set('sort', sort);
     if (order) params.set('order', order);
+    appendYear(params, existingFoursome.year);
     const queryString = params.toString();
-    
+
     return redirect(queryString ? `/foursomes?${queryString}` : '/foursomes');
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -188,11 +203,13 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
     return selectedInOther;
   };
 
-  // Generate URL with current search parameters
+  // Generate URL with current search parameters, keeping the season this
+  // foursome belongs to so "Back to Foursomes" returns to the right list.
   const getUrlWithCurrentParams = (basePath: string) => {
     const params = new URLSearchParams();
     if (sort) params.set('sort', sort);
     if (order) params.set('order', order);
+    appendYear(params, foursome.year);
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
@@ -208,233 +225,125 @@ export default function EditFoursome({ loaderData, actionData }: Route.Component
     }
   }, [actionData]);
 
+  const golferSlots = ['golfer1Id', 'golfer2Id', 'golfer3Id', 'golfer4Id'] as const;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Link 
-              to={getUrlWithCurrentParams('/foursomes')}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
-            >
-              ← Back to Foursomes
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Edit Foursome
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Update foursome details for {roundLabels[foursome.round as keyof typeof roundLabels]}
-          </p>
-        </div>
+    <PageLayout user={user} width="form">
+      <Link
+        to={getUrlWithCurrentParams('/foursomes')}
+        className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"
+      >
+        &larr; Back to Foursomes
+      </Link>
 
-        <Card className="relative">
-          {isSubmitting && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Spinner size="lg" />
-                <span className="text-lg font-medium text-gray-700">Updating foursome...</span>
-              </div>
+      <PageHeader
+        title="Edit Foursome"
+        subtitle={`${ROUND_LABELS[foursome.round as keyof typeof ROUND_LABELS]} · ${foursome.year}`}
+      />
+
+      <Card>
+        <CardContent className="py-5">
+          <form method="post" className="space-y-6" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                id="round"
+                name="round"
+                label="Round"
+                required
+                defaultValue={foursome.round}
+              >
+                {Object.entries(ROUND_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                id="course"
+                name="course"
+                label="Course"
+                required
+                defaultValue={foursome.course}
+              >
+                {Object.entries(COURSES).map(([value, info]) => (
+                  <option key={value} value={value}>
+                    {info.label} &mdash; par {info.par}, {info.yardage.toLocaleString()} yds
+                  </option>
+                ))}
+              </Select>
             </div>
-          )}
-          
-          <CardContent className="p-6">
-            <form method="post" className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="round" className="block text-sm font-medium text-gray-700 mb-2">
-                    Round *
-                  </label>
-                  <select 
-                    id="round"
-                    name="round" 
-                    required
-                    defaultValue={foursome.round}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Select a round</option>
-                    {Object.entries(roundLabels).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </div>
 
-                <div>
-                  <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-2">
-                    Course *
-                  </label>
-                  <select 
-                    id="course"
-                    name="course" 
-                    required
-                    defaultValue={foursome.course}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Select a course</option>
-                    <option value="BLACK">Black</option>
-                    <option value="SILVER">Silver</option>
-                  </select>
-                </div>
-              </div>
+            <Input
+              id="teeTime"
+              name="teeTime"
+              type="datetime-local"
+              label="Tee time"
+              required
+              defaultValue={formatDateTimeLocal(new Date(foursome.teeTime))}
+              helperText="Eastern Time (ET)"
+            />
 
-              <div>
-                <label htmlFor="teeTime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tee Time * <span className="text-xs font-normal text-gray-500">(Eastern Time)</span>
-                </label>
-                <Input 
-                  id="teeTime"
-                  name="teeTime" 
-                  type="datetime-local" 
-                  required
-                  defaultValue={formatDateTimeLocal(new Date(foursome.teeTime))}
-                  className="w-full"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  All tee times are in Eastern Time (ET)
-                </p>
-              </div>
+            {/* A foursome's season cannot be changed here -- moving a round
+                between years would orphan it from that season's roster. */}
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Season:</span>
+              <Badge tone="neutral">{foursome.year}</Badge>
+              <span className="text-gray-400">(cannot be changed)</span>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="golfer1Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 1
-                  </label>
-                  <select 
-                    id="golfer1Id"
-                    name="golfer1Id" 
-                    value={selectedGolfers.golfer1Id}
-                    onChange={(e) => handleGolferChange('golfer1Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            <fieldset>
+              <legend className="text-sm font-medium text-gray-700 mb-2">Players</legend>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {golferSlots.map((slot, index) => (
+                  <Select
+                    key={slot}
+                    id={slot}
+                    name={slot}
+                    aria-label={`Player ${index + 1}`}
+                    value={selectedGolfers[slot]}
+                    onChange={(event) => handleGolferChange(slot, event.target.value)}
+                    disabled={golfers.length === 0}
                   >
-                    <option value="">Select golfer</option>
+                    <option value="">Player {index + 1}</option>
                     {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
+                      <option
+                        key={golfer.id}
                         value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer1Id')}
+                        disabled={isGolferDisabled(golfer.id, slot)}
                       >
                         {golfer.name}
                       </option>
                     ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="golfer2Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 2
-                  </label>
-                  <select 
-                    id="golfer2Id"
-                    name="golfer2Id" 
-                    value={selectedGolfers.golfer2Id}
-                    onChange={(e) => handleGolferChange('golfer2Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Select golfer</option>
-                    {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
-                        value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer2Id')}
-                      >
-                        {golfer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="golfer3Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 3
-                  </label>
-                  <select 
-                    id="golfer3Id"
-                    name="golfer3Id" 
-                    value={selectedGolfers.golfer3Id}
-                    onChange={(e) => handleGolferChange('golfer3Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Select golfer</option>
-                    {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
-                        value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer3Id')}
-                      >
-                        {golfer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="golfer4Id" className="block text-sm font-medium text-gray-700 mb-2">
-                    Golfer 4
-                  </label>
-                  <select 
-                    id="golfer4Id"
-                    name="golfer4Id" 
-                    value={selectedGolfers.golfer4Id}
-                    onChange={(e) => handleGolferChange('golfer4Id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Select golfer</option>
-                    {golfers.map((golfer: any) => (
-                      <option 
-                        key={golfer.id} 
-                        value={golfer.id}
-                        disabled={isGolferDisabled(golfer.id, 'golfer4Id')}
-                      >
-                        {golfer.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  </Select>
+                ))}
               </div>
-              
-              <div>
-                <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-2">
-                  Score (strokes above/below par)
-                </label>
-                <Input 
-                  id="score"
-                  name="score" 
-                  type="number" 
-                  placeholder="e.g., -2 (under par) or +5 (over par)"
-                  defaultValue={foursome.score?.toString() || '0'}
-                  className="w-full"
-                />
-              </div>
+            </fieldset>
 
-              {actionData?.error && (
-                <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-                  {actionData.error}
-                </div>
-              )}
+            <Input
+              id="score"
+              name="score"
+              type="number"
+              label="Team score"
+              defaultValue={foursome.score.toString()}
+              helperText="Strokes relative to par for the group."
+            />
 
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <Spinner size="sm" />
-                      Updating Foursome...
-                    </div>
-                  ) : (
-                    'Update Foursome'
-                  )}
+            <ActionMessage actionData={actionData} className="" />
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+              <Link to={getUrlWithCurrentParams('/foursomes')}>
+                <Button type="button" variant="secondary" fullWidth>
+                  Cancel
                 </Button>
-                <Link to={getUrlWithCurrentParams('/foursomes')}>
-                  <Button type="button" variant="secondary">
-                    Cancel
-                  </Button>
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+              </Link>
+              <Button type="submit" loading={isSubmitting} loadingText="Saving...">
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageLayout>
   );
 }

@@ -107,7 +107,7 @@ export function UserCard({
           <div>
             <h4 className="text-sm font-medium text-gray-700">Golfer Association</h4>
             {userItem.golfer ? (
-              <p className="text-sm text-green-600">
+              <p className="text-sm text-brand-600">
                 ✓ Associated with golfer: {userItem.golfer.name}
               </p>
             ) : (

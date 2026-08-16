@@ -1,15 +1,87 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens.
+ *
+ * There is no tailwind.config.js, so this @theme block IS the design system.
+ * The namespace prefixes are load bearing, not naming convention -- Tailwind v4
+ * generates utilities from them:
+ *   --color-*  -> bg-*, text-*, border-*, ring-*, divide-*
+ *   --radius-* -> rounded-*
+ *   --shadow-* -> shadow-*
+ *   --font-*   -> font-*
+ * A token named --brand-primary would generate nothing at all.
+ *
+ * The brand ramp is seeded with Tailwind's stock green values, which the app was
+ * already built on. That makes `bg-green-600` -> `bg-brand-600` a pure rename
+ * with zero visual change, so the reskin stays mechanical and reviewable. Retune
+ * the palette afterwards by editing these eleven lines and nothing else.
+ * --color-brand-600 (#16a34a) must stay in sync with manifest.json's theme_color
+ * and the <meta name="theme-color"> in root.tsx.
+ */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Brand ramp */
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-200: #bbf7d0;
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
+  --color-brand-500: #22c55e;
+  --color-brand-600: #16a34a;
+  --color-brand-700: #15803d;
+  --color-brand-800: #166534;
+  --color-brand-900: #14532d;
+  --color-brand-950: #052e16;
+
+  /* Semantic surfaces. Named by role so a reskin does not have to rename
+     every gray-50/gray-200/gray-900 individually. */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;
+  --color-surface-sunken: #f3f4f6;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+  --color-ink: #111827;
+  --color-ink-muted: #6b7280;
+  --color-ink-subtle: #9ca3af;
+
+  /* Radii. The app previously mixed rounded-md (72x), rounded-lg (24x) and bare
+     rounded (8x) with no rule; these three cover every real case. */
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-pill: 9999px;
+
+  /* Elevation. Replaces an unscaled mix of shadow/sm/md/lg/xl. */
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-overlay: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+/*
+ * Safe-area insets cannot live in @theme -- they are runtime env() values, not
+ * static tokens. manifest.json declares display:standalone, so without these the
+ * installed PWA renders under the home indicator and notch.
+ */
+@utility pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@utility pt-safe {
+  padding-top: max(0px, env(safe-area-inset-top));
+}
+
+/*
+ * Light only, deliberately.
+ *
+ * This previously set `dark:bg-gray-950` on the body plus color-scheme:dark --
+ * the only two pieces of dark-mode code in the entire app. Every page then
+ * painted `min-h-screen bg-gray-50` over it while keeping text-gray-900, so the
+ * net effect on a phone in dark mode was darkened native form controls (selects,
+ * date pickers) against otherwise-white cards. Body now matches the page shells.
+ */
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
-
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+  @apply bg-gray-50 text-gray-900;
 }

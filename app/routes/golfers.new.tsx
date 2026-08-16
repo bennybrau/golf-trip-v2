@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, redirect } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import { PageLayout, PageHeader, Card, CardContent, Button, Input, ActionMessage } from '../components/ui';
 import { prisma } from '../lib/db';
+import { resolveYear } from '../lib/season';
 import { z } from 'zod';
 import type { Route } from './+types/golfers.new';
 
@@ -78,11 +78,13 @@ export async function action({ request }: Route.ActionArgs) {
       }
     });
     
-    // Create default yearly status for current year (2025)
+    // Put the new golfer on the roster for the season being viewed, not a
+    // hardcoded one -- adding a golfer from /golfers?year=2026 previously filed
+    // them under 2025, leaving them invisible on the season you were looking at.
     await prisma.golferStatus.create({
       data: {
         golferId: newGolfer.id,
-        year: 2025,
+        year: resolveYear(url.searchParams),
         isActive: true,
         cabin: null
       }
@@ -131,107 +133,38 @@ export default function NewGolfer({ loaderData, actionData }: Route.ComponentPro
   }, [actionData]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Link 
-              to={getBackUrl()}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
-            >
-              ← Back to Golfers
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Add New Golfer
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Create a new golfer profile
-          </p>
-        </div>
+    <PageLayout user={user} width="form">
+      <Link
+        to={getBackUrl()}
+        className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"
+      >
+        &larr; Back to Golfers
+      </Link>
 
-        <Card className="relative">
-          {isSubmitting && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Spinner size="lg" />
-                <span className="text-lg font-medium text-gray-700">Adding golfer...</span>
-              </div>
-            </div>
-          )}
-          
-          <CardContent className="p-6">
-            <form method="post" className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Name *
-                </label>
-                <Input 
-                  id="name"
-                  name="name" 
-                  type="text" 
-                  required
-                  placeholder="Enter golfer's full name"
-                  className="w-full"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <Input 
-                  id="email"
-                  name="email" 
-                  type="email" 
-                  placeholder="Enter email address"
-                  className="w-full"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone
-                </label>
-                <Input 
-                  id="phone"
-                  name="phone" 
-                  type="tel" 
-                  placeholder="Enter phone number"
-                  className="w-full"
-                />
-              </div>
-              
+      <PageHeader title="Add Golfer" subtitle="Add someone to the master roster" />
 
-              {actionData?.error && (
-                <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-                  {actionData.error}
-                </div>
-              )}
+      <Card>
+        <CardContent className="py-5">
+          <form method="post" className="space-y-5" onSubmit={handleSubmit}>
+            <Input id="name" name="name" label="Name" required placeholder="Full name" />
+            <Input id="email" name="email" type="email" label="Email" placeholder="Optional" />
+            <Input id="phone" name="phone" type="tel" label="Phone" placeholder="Optional" />
 
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <div className="flex items-center gap-2">
-                      <Spinner size="sm" />
-                      Adding Golfer...
-                    </div>
-                  ) : (
-                    'Add Golfer'
-                  )}
+            <ActionMessage actionData={actionData} className="" />
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+              <Link to={getBackUrl()}>
+                <Button type="button" variant="secondary" fullWidth>
+                  Cancel
                 </Button>
-                <Link to={getBackUrl()}>
-                  <Button type="button" variant="secondary">
-                    Cancel
-                  </Button>
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+              </Link>
+              <Button type="submit" loading={isSubmitting} loadingText="Adding...">
+                Add Golfer
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageLayout>
   );
 }

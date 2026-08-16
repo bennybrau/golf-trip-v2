@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, redirect } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner } from '../components/ui';
+import { Select, PageLayout, Card, CardContent, Button, Input, Spinner } from '../components/ui';
 import { prisma } from '../lib/db';
 import { z } from 'zod';
 
@@ -192,10 +191,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
   }, [actionData]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={currentUser} />
-      
-      <main className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout user={currentUser} width="form">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Link 
@@ -217,7 +213,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
           {/* User Details Card */}
           <Card className="relative">
             {isSubmitting && (
-              <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+              <div className="absolute inset-0 bg-white/75 flex items-center justify-center z-10 rounded-lg">
                 <div className="flex items-center gap-3">
                   <Spinner size="lg" />
                   <span className="text-lg font-medium text-gray-700">Updating user...</span>
@@ -231,7 +227,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
               <form method="post" className="space-y-6" onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
                       Full Name *
                     </label>
                     <Input 
@@ -245,7 +241,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                   </div>
                   
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                       Email Address *
                     </label>
                     <Input 
@@ -261,7 +257,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
                       Phone Number
                     </label>
                     <Input 
@@ -279,7 +275,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                         type="checkbox"
                         name="isAdmin"
                         defaultChecked={user.isAdmin}
-                        className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                        className="rounded border-gray-300 text-brand-600 shadow-sm focus:border-brand-300 focus:ring focus:ring-brand-200 focus:ring-opacity-50"
                       />
                       <span className="ml-2 text-sm font-medium text-gray-700">
                         Administrator privileges
@@ -293,9 +289,9 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Golfer Association</h3>
                   
                   {user.golfer ? (
-                    <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4">
-                      <h4 className="text-sm font-medium text-green-800 mb-2">Currently Associated Golfer</h4>
-                      <p className="text-sm text-green-700">
+                    <div className="bg-brand-50 border border-brand-200 rounded-md p-4 mb-4">
+                      <h4 className="text-sm font-medium text-brand-800 mb-2">Currently Associated Golfer</h4>
+                      <p className="text-sm text-brand-700">
                         {user.golfer.name}
                       </p>
                     </div>
@@ -316,7 +312,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                           value="existing"
                           defaultChecked={!createNewGolfer}
                           onChange={() => setCreateNewGolfer(false)}
-                          className="text-green-600 focus:ring-green-500"
+                          className="text-brand-600 focus:ring-brand-500"
                         />
                         <span className="ml-2 text-sm font-medium text-gray-700">
                           Associate with existing golfer
@@ -325,10 +321,10 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                       
                       {!createNewGolfer && (
                         <div className="mt-2 ml-6">
-                          <select 
+                          <Select 
                             name="associateGolfer" 
                             defaultValue={user.golfer?.id || ''}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                            
                           >
                             <option value="">No association</option>
                             {user.golfer && (
@@ -341,7 +337,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                                 {golfer.name} ({golfer.email || 'No email'})
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                       )}
                     </div>
@@ -354,7 +350,7 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
                           value="new"
                           checked={createNewGolfer}
                           onChange={() => setCreateNewGolfer(true)}
-                          className="text-green-600 focus:ring-green-500"
+                          className="text-brand-600 focus:ring-brand-500"
                         />
                         <span className="ml-2 text-sm font-medium text-gray-700">
                           Create new golfer for this user
@@ -424,7 +420,6 @@ export default function EditUser({ loaderData, actionData }: { loaderData: any, 
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

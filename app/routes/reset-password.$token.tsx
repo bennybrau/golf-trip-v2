@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { validatePasswordResetToken, resetPassword, getSessionUser } from '../lib/auth';
 import { resetPasswordSchema, type ResetPasswordInput } from '../lib/validation';
 import { getSessionToken } from '../lib/session';
-import { Button, Input, Alert } from '../components/ui';
+import { AuthLayout, Input, Button, Alert } from '../components/ui';
 import type { Route } from './+types/reset-password.$token';
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -90,126 +90,78 @@ export default function ResetPassword() {
   // Show success message if action succeeded
   if (actionData?.success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Password Reset Successful
-          </h2>
-        </div>
-
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <Alert variant="success" className="mb-6">
-              {actionData.message}
-            </Alert>
-
-            <div className="text-center">
-              <Link 
-                to="/login" 
-                className="font-medium text-green-600 hover:text-green-500"
-              >
-                Sign in with your new password
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AuthLayout
+        title="Password reset"
+        footer={
+          <Link to="/login" className="font-medium text-brand-700 hover:text-brand-800">
+            Sign in with your new password
+          </Link>
+        }
+      >
+        <Alert variant="success">{actionData.message}</Alert>
+      </AuthLayout>
     );
   }
 
   // Show error only if token is invalid and it's not a revalidation after success
   if (!isValidToken && !isRevalidation) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Invalid Reset Link
-          </h2>
-        </div>
-
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <Alert variant="error" className="mb-6">
-              This password reset link is invalid or has expired. Please request a new password reset.
-            </Alert>
-
-            <div className="text-center">
-              <Link 
-                to="/forgot-password" 
-                className="font-medium text-green-600 hover:text-green-500"
-              >
-                Request new reset link
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AuthLayout
+        title="Link expired"
+        subtitle="This password reset link is no longer valid"
+        footer={
+          <Link to="/forgot-password" className="font-medium text-brand-700 hover:text-brand-800">
+            Request a new link
+          </Link>
+        }
+      >
+        <Alert variant="error">
+          Reset links expire one hour after they are sent, and can only be used once.
+        </Alert>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Set new password
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Enter your new password below.
-        </p>
-      </div>
+    <AuthLayout
+      title="Set new password"
+      subtitle="Enter your new password below"
+      footer={
+        <Link to="/login" className="font-medium text-brand-700 hover:text-brand-800">
+          Back to sign in
+        </Link>
+      }
+    >
+      {actionData && !actionData.success && actionData.message && (
+        <Alert variant="error" className="mb-5">
+          {actionData.message}
+        </Alert>
+      )}
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {actionData && !actionData.success && actionData.message && (
-            <Alert variant="error" className="mb-6">
-              {actionData.message}
-            </Alert>
-          )}
-
-          <Form method="post" className="space-y-6">
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              label="New password"
-              autoComplete="new-password"
-              required
-              error={actionData?.errors?.password?.[0]}
-              helperText="Must be at least 8 characters long"
-            />
-
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              label="Confirm new password"
-              autoComplete="new-password"
-              required
-              error={actionData?.errors?.confirmPassword?.[0]}
-            />
-
-            <div>
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Updating password...' : 'Update password'}
-              </Button>
-            </div>
-          </Form>
-
-          <div className="mt-6 text-center">
-            <Link 
-              to="/login" 
-              className="font-medium text-green-600 hover:text-green-500"
-            >
-              Back to sign in
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+      <Form method="post" className="space-y-5">
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          label="New password"
+          autoComplete="new-password"
+          required
+          error={actionData?.errors?.password?.[0]}
+          helperText="At least 8 characters."
+        />
+        <Input
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          label="Confirm new password"
+          autoComplete="new-password"
+          required
+          error={actionData?.errors?.confirmPassword?.[0]}
+        />
+        <Button type="submit" fullWidth loading={isSubmitting} loadingText="Updating...">
+          Update password
+        </Button>
+      </Form>
+    </AuthLayout>
   );
 }

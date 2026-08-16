@@ -1,7 +1,9 @@
 import { Link } from 'react-router';
 import { Pencil, Trash2 } from 'lucide-react';
-import { Card, CardContent, Button, Spinner } from '../ui';
+import { Card, CardContent, Button, Badge, ConfirmButton } from '../ui';
+import { ScoreValue } from '../dashboard';
 import { formatTeeTimeDisplay } from '../../lib/timeUtils';
+import { COURSE_LABELS, ROUND_LABELS } from '../../lib/course';
 
 interface FoursomeCardProps {
   foursome: {
@@ -15,112 +17,72 @@ interface FoursomeCardProps {
     golfer3?: { name: string } | null;
     golfer4?: { name: string } | null;
   };
-  user: {
-    isAdmin: boolean;
-  };
-  deletingFoursomeId: string | null;
-  setDeletingFoursomeId: (id: string | null) => void;
+  user: { isAdmin: boolean };
   getUrlWithCurrentParams: (path: string) => string;
-  roundLabels: Record<string, string>;
 }
 
-const getCourseBadgeClasses = (course: string) => {
-  const courseLower = course.toLowerCase();
-  if (courseLower === 'black') {
-    return 'bg-black text-white';
-  } else if (courseLower === 'silver') {
-    return 'bg-gray-400 text-black';
-  }
-  return 'bg-blue-500 text-white'; // Default for other courses
-};
+export function FoursomeCard({ foursome, user, getUrlWithCurrentParams }: FoursomeCardProps) {
+  // The four denormalized player columns; nulls are legal (a group can be short).
+  const players = [foursome.golfer1, foursome.golfer2, foursome.golfer3, foursome.golfer4]
+    .filter((g): g is { name: string } => Boolean(g))
+    .map((g) => g.name);
 
-// formatTeeTime function replaced with formatTeeTimeDisplay from timeUtils
-
-export function FoursomeCard({ 
-  foursome, 
-  user, 
-  deletingFoursomeId, 
-  setDeletingFoursomeId, 
-  getUrlWithCurrentParams,
-  roundLabels
-}: FoursomeCardProps) {
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {formatTeeTimeDisplay(foursome.teeTime)}
+      <CardContent className="py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold text-gray-900">
+                {ROUND_LABELS[foursome.round as keyof typeof ROUND_LABELS] ?? foursome.round}
               </h3>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCourseBadgeClasses(foursome.course)}`}>
-                {foursome.course}
-              </span>
+              <Badge tone={foursome.course === 'BLACK' ? 'dark' : 'silver'}>
+                {COURSE_LABELS[foursome.course as keyof typeof COURSE_LABELS] ?? foursome.course}
+              </Badge>
             </div>
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600">
-                <strong>Round:</strong> {roundLabels[foursome.round as keyof typeof roundLabels]}
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Players:</strong> {[foursome.golfer1?.name, foursome.golfer2?.name, foursome.golfer3?.name, foursome.golfer4?.name].filter(Boolean).join(', ')}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {/* Edit & Delete Buttons (Admin Only) */}
-            {user.isAdmin && (
-              <div className="flex gap-2">
-                {/* Edit Button */}
-                <Link to={getUrlWithCurrentParams(`/foursomes/${foursome.id}/edit`)}>
-                  <Button 
-                    size="sm"
-                    variant="secondary"
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                </Link>
-                
-                {/* Delete Button */}
-                <form 
-                  method="post" 
-                  className="inline"
-                  onSubmit={(e) => {
-                    const roundName = roundLabels[foursome.round as keyof typeof roundLabels];
-                    if (!confirm(`Are you sure you want to delete the ${roundName} foursome? This action cannot be undone.`)) {
-                      e.preventDefault();
-                      return false;
-                    }
-                    setDeletingFoursomeId(foursome.id);
-                    return true;
-                  }}
-                >
-                  <input type="hidden" name="_action" value="delete-foursome" />
-                  <input type="hidden" name="foursomeId" value={foursome.id} />
-                  <Button
-                    type="submit"
-                    variant="danger"
-                    size="sm"
-                    disabled={deletingFoursomeId === foursome.id}
-                  >
-                    {deletingFoursomeId === foursome.id ? (
-                      <div className="flex items-center gap-1">
-                        <Spinner size="sm" />
-                        Deleting...
-                      </div>
-                    ) : (
-                      <Trash2 size={16} />
-                    )}
-                  </Button>
-                </form>
-              </div>
+
+            <p className="mt-0.5 text-sm text-gray-600">{formatTeeTimeDisplay(foursome.teeTime)}</p>
+
+            {/* One name per line rather than a comma-joined paragraph, which
+                wrapped to 3-4 ragged lines on a phone. */}
+            {players.length > 0 ? (
+              <ul className="mt-2 space-y-0.5">
+                {players.map((name) => (
+                  <li key={name} className="text-sm text-gray-700 truncate">
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-gray-400 italic">No players assigned</p>
             )}
-            <div className="text-2xl font-bold">
-              <span className={foursome.score < 0 ? 'text-blue-600' : 'text-black'}>
-                {foursome.score > 0 ? '+' : ''}{foursome.score}
-              </span>
+          </div>
+
+          <div className="shrink-0 text-right">
+            <div className="text-2xl font-bold tabular-nums">
+              <ScoreValue score={foursome.score} />
             </div>
+            <p className="mt-0.5 text-xs text-gray-500">team score</p>
           </div>
         </div>
+
+        {user.isAdmin && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+            <Link to={getUrlWithCurrentParams(`/foursomes/${foursome.id}/edit`)}>
+              <Button variant="secondary" size="icon" aria-label="Edit foursome">
+                <Pencil size={16} />
+              </Button>
+            </Link>
+            <ConfirmButton
+              fields={{ _action: 'delete-foursome', foursomeId: foursome.id }}
+              confirmTitle="Delete this foursome?"
+              confirmMessage="The round and its score will be removed."
+              aria-label="Delete foursome"
+            >
+              <Trash2 size={16} />
+            </ConfirmButton>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

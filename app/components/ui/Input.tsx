@@ -1,4 +1,6 @@
 import React from 'react';
+import { cn } from '../../lib/cn';
+import { controlClasses, controlBorder, Label } from './Field';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -7,25 +9,27 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', label, error, helperText, ...props }, ref) => {
-    const inputClasses = `w-full px-3 py-3 border rounded-lg shadow-sm placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
-      error ? 'border-red-300' : 'border-gray-300'
-    } ${className}`.trim();
-    
+  ({ className, label, error, helperText, id, ...props }, ref) => {
+    const input = (
+      <input
+        ref={ref}
+        id={id}
+        // Shares controlClasses with Select and Textarea. Previously this was
+        // `rounded-lg py-3` against the selects' `rounded-md py-2`, so controls
+        // in the same row had different heights and corner radii.
+        className={cn(controlClasses, controlBorder(!!error), className)}
+        {...props}
+      />
+    );
+
+    if (!label && !error && !helperText) return input;
+
     return (
-      <div className="space-y-1">
-        {label && (
-          <label className="block text-sm font-medium text-gray-700">
-            {label}
-          </label>
-        )}
-        <input ref={ref} className={inputClasses} {...props} />
-        {error && (
-          <p className="text-sm text-red-600">{error}</p>
-        )}
-        {helperText && !error && (
-          <p className="text-sm text-gray-500">{helperText}</p>
-        )}
+      <div className="space-y-1.5">
+        {label && <Label htmlFor={id}>{label}</Label>}
+        {input}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {helperText && !error && <p className="text-sm text-gray-500">{helperText}</p>}
       </div>
     );
   }

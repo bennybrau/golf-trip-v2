@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Input, Spinner, Pagination } from '../components/ui';
+import {
+  PageLayout,
+  PageHeader,
+  Card,
+  CardContent,
+  Button,
+  Input,
+  Select,
+  Badge,
+  Pagination,
+  ActionMessage,
+  EmptyState,
+} from '../components/ui';
 import { PhotoCard } from '../components/cards';
 import { PhotoModal } from '../components/PhotoModal';
 import { prisma } from '../lib/db';
+import { CURRENT_YEAR } from '../lib/season';
 import { cloudflareImages } from '../lib/cloudflare';
 import { z } from 'zod';
 import type { Route } from './+types/gallery';
@@ -29,8 +41,17 @@ export async function loader({ request }: Route.LoaderArgs) {
     const pageSize = 20;
     const skip = (page - 1) * pageSize;
     
-    // Build where clause for filtering
-    const whereClause = category && category !== 'ALL' ? { category } : {};
+    // Year filter, enabled by Photo.year. 'ALL' shows every season;
+    // 'UNSORTED' isolates photos whose year could not be determined.
+    const yearParam = url.searchParams.get('galleryYear') || 'ALL';
+
+    const whereClause: any = {};
+    if (category && category !== 'ALL') whereClause.category = category;
+    if (yearParam === 'UNSORTED') whereClause.year = null;
+    else if (yearParam !== 'ALL') {
+      const parsed = Number.parseInt(yearParam, 10);
+      if (Number.isInteger(parsed)) whereClause.year = parsed;
+    }
     
     // Get total count for pagination
     const totalPhotos = await prisma.photo.count({ where: whereClause });
@@ -57,6 +78,14 @@ export async function loader({ request }: Route.LoaderArgs) {
       select: { category: true },
     });
     const categories = [...new Set(allPhotos.map(photo => photo.category).filter(Boolean))];
+
+    // Seasons that actually have photos, plus a bucket for undated ones.
+    const yearGroups = await prisma.photo.groupBy({ by: ['year'] });
+    const photoYears = yearGroups
+      .map((row) => row.year)
+      .filter((year): year is number => year !== null)
+      .sort((a, b) => b - a);
+    const unsortedCount = await prisma.photo.count({ where: { year: null } });
     
     return { 
       user, 
@@ -70,7 +99,10 @@ export async function loader({ request }: Route.LoaderArgs) {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
       },
-      currentCategory: category || 'ALL'
+      currentCategory: category || 'ALL',
+      photoYears,
+      unsortedCount,
+      currentGalleryYear: yearParam,
     };
   } catch (response) {
     throw response;
@@ -100,6 +132,11 @@ export async function action({ request }: Route.ActionArgs) {
     // Convert empty string to null to properly handle no category
     const categoryValue = category && category.trim() !== '' ? category : null;
 
+    // Blank stays null ("unsorted") rather than guessing a season.
+    const rawYear = formData.get('year') as string | null;
+    const parsedYear = rawYear ? Number.parseInt(rawYear, 10) : NaN;
+    const yearValue = Number.isInteger(parsedYear) ? parsedYear : null;
+
     try {
       // Validate file
       if (!file || file.size === 0) {
@@ -126,6 +163,7 @@ export async function action({ request }: Route.ActionArgs) {
           url,
           caption,
           category: categoryValue,
+          year: yearValue,
           createdBy: user.id,
         },
       });
@@ -178,12 +216,12 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Gallery({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, photos, categories, pagination, currentCategory } = loaderData;
+  const { user, photos, categories, pagination, currentCategory, photoYears, unsortedCount, currentGalleryYear } =
+    loaderData;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   // Photos are already filtered and paginated on the server
   const filteredPhotos = photos;
@@ -202,219 +240,209 @@ export default function Gallery({ loaderData, actionData }: Route.ComponentProps
     }
   }, [actionData]);
 
+  const galleryYearOptions = [
+    { value: 'ALL', label: 'All years' },
+    ...photoYears.map((year: number) => ({ value: String(year), label: String(year) })),
+    ...(unsortedCount > 0
+      ? [{ value: 'UNSORTED', label: `Unsorted (${unsortedCount})` }]
+      : []),
+  ];
+
+  /** Builds a gallery URL preserving the other filter, resetting the page. */
+  const filterHref = (overrides: Record<string, string>) => {
+    const params = new URLSearchParams();
+    const category = overrides.category ?? currentCategory;
+    const galleryYear = overrides.galleryYear ?? currentGalleryYear;
+    if (category && category !== 'ALL') params.set('category', category);
+    if (galleryYear && galleryYear !== 'ALL') params.set('galleryYear', galleryYear);
+    const qs = params.toString();
+    return qs ? `/gallery?${qs}` : '/gallery';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Photos
-          </h1>
-          
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            {/* Category Filter */}
-            <div className="flex gap-2 flex-wrap">
-              <Link to="/gallery">
-                <Button
-                  variant={currentCategory === 'ALL' ? 'primary' : 'secondary'}
-                  size="sm"
-                >
-                  All Photos
-                </Button>
-              </Link>
-              {categories.map((category) => (
-                <Link key={category} to={`/gallery?category=${encodeURIComponent(category || '')}`}>
-                  <Button
-                    variant={currentCategory === category ? 'primary' : 'secondary'}
-                    size="sm"
-                  >
-                    {category}
+    <PageLayout user={user}>
+      <PageHeader
+        title="Photos"
+        subtitle={`${pagination.totalPhotos} photo${pagination.totalPhotos === 1 ? '' : 's'} from the trip`}
+        actions={
+          user.isAdmin ? (
+            <Button onClick={() => setIsFormOpen(!isFormOpen)}>
+              {isFormOpen ? 'Cancel' : 'Add Photo'}
+            </Button>
+          ) : undefined
+        }
+        controls={
+          <>
+            {/* Season filter, enabled by Photo.year. */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="gallery-year" className="text-sm font-medium text-gray-700">
+                Year:
+              </label>
+              <Select
+                id="gallery-year"
+                value={currentGalleryYear}
+                onChange={(event) => {
+                  window.location.href = filterHref({ galleryYear: event.target.value });
+                }}
+                className="w-auto"
+              >
+                {galleryYearOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <Link to={filterHref({ category: 'ALL' })}>
+                  <Button variant={currentCategory === 'ALL' ? 'primary' : 'secondary'} size="sm">
+                    All
                   </Button>
                 </Link>
-              ))}
-            </div>
-            
-            {/* Add Photo Button (Admin Only) */}
-            {user.isAdmin && (
-              <Button 
-                onClick={() => setIsFormOpen(!isFormOpen)}
-                className="mb-6"
-              >
-                {isFormOpen ? 'Cancel' : 'Add Photo'}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Add Photo Form (Admin Only) */}
-        {user.isAdmin && isFormOpen && (
-          <Card className="mb-8 relative">
-            {isUploading && (
-              <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Spinner size="lg" />
-                  <span className="text-lg font-medium text-gray-700">Uploading photo...</span>
-                </div>
+                {categories.map((category) => (
+                  <Link key={category} to={filterHref({ category: category || '' })}>
+                    <Button
+                      variant={currentCategory === category ? 'primary' : 'secondary'}
+                      size="sm"
+                    >
+                      {category}
+                    </Button>
+                  </Link>
+                ))}
               </div>
             )}
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Add New Photo
-              </h2>
-              
-              <form method="post" encType="multipart/form-data" className="space-y-4" onSubmit={handleUploadSubmit}>
-                <input type="hidden" name="_action" value="add-photo" />
-                
-                <div>
-                  <label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-1">
-                    Photo File *
-                  </label>
-                  <Input 
-                    id="file"
-                    name="file" 
-                    type="file" 
-                    required
-                    accept="image/*"
-                    className="w-full"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Supported formats: JPG, PNG, GIF, WebP. Max size: 10MB
-                  </p>
-                </div>
-                
-                <div>
-                  <label htmlFor="caption" className="block text-sm font-medium text-gray-700 mb-1">
-                    Caption
-                  </label>
-                  <Input 
-                    id="caption"
-                    name="caption" 
-                    type="text" 
-                    placeholder="Photo description"
-                    className="w-full"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
-                  <select 
-                    id="category"
-                    name="category" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                    onChange={(e) => setShowCustomCategory(e.target.value === 'custom')}
-                  >
-                    <option value="">No category</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category || ''}>{category}</option>
-                    ))}
-                    <option value="custom">+ Add new category</option>
-                  </select>
-                </div>
+          </>
+        }
+      />
 
-                {showCustomCategory && (
-                  <div>
-                    <label htmlFor="customCategory" className="block text-sm font-medium text-gray-700 mb-1">
-                      New Category Name
-                    </label>
-                    <Input 
-                      id="customCategory"
-                      name="customCategory" 
-                      type="text" 
-                      placeholder="Enter new category name"
-                      className="w-full"
-                      required
-                    />
-                  </div>
-                )}
+      {user.isAdmin && isFormOpen && (
+        <Card className="mb-6">
+          <CardContent className="py-5">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Add a photo</h2>
 
-                {actionData?.error && (
-                  <div className="text-red-600 text-sm">
-                    {actionData.error}
-                  </div>
-                )}
+            <form
+              method="post"
+              encType="multipart/form-data"
+              className="space-y-4"
+              onSubmit={handleUploadSubmit}
+            >
+              <input type="hidden" name="_action" value="add-photo" />
 
-                {actionData?.success && (
-                  <div className="text-green-600 text-sm">
-                    {actionData.message}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={isUploading}>
-                    {isUploading ? (
-                      <div className="flex items-center gap-2">
-                        <Spinner size="sm" />
-                        Uploading...
-                      </div>
-                    ) : (
-                      'Add Photo'
-                    )}
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="secondary"
-                    onClick={() => setIsFormOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-
-        {/* Photo Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredPhotos.length === 0 ? (
-            <div className="col-span-full">
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-gray-500">
-                    {currentCategory === 'ALL' 
-                      ? 'No photos found. Add your first photo to get started!' 
-                      : `No photos found in the "${currentCategory}" category.`
-                    }
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            filteredPhotos.map((photo: any) => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                user={user}
-                deletingPhotoId={deletingPhotoId}
-                setSelectedPhoto={setSelectedPhoto}
-                setDeletingPhotoId={setDeletingPhotoId}
+              <Input
+                id="file"
+                name="file"
+                type="file"
+                label="Photo file"
+                required
+                accept="image/*"
+                helperText="JPG, PNG, GIF or WebP. Max 10MB."
               />
-            ))
-          )}
+
+              <Input id="caption" name="caption" type="text" label="Caption" placeholder="Optional" />
+
+              <Select
+                id="photo-year"
+                name="year"
+                label="Year"
+                defaultValue={currentGalleryYear !== 'ALL' && currentGalleryYear !== 'UNSORTED' ? currentGalleryYear : ''}
+                helperText="Which trip this photo is from."
+              >
+                <option value="">Unsorted</option>
+                {photoYears.map((year: number) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+                {!photoYears.includes(CURRENT_YEAR) && (
+                  <option value={CURRENT_YEAR}>{CURRENT_YEAR}</option>
+                )}
+              </Select>
+
+              <Select
+                id="category"
+                name="category"
+                label="Category"
+                onChange={(event) => setShowCustomCategory(event.target.value === 'custom')}
+              >
+                <option value="">No category</option>
+                {categories.map((category) => (
+                  <option key={category} value={category || ''}>
+                    {category}
+                  </option>
+                ))}
+                <option value="custom">+ Add new category</option>
+              </Select>
+
+              {showCustomCategory && (
+                <Input
+                  id="customCategory"
+                  name="customCategory"
+                  type="text"
+                  label="New category name"
+                  required
+                />
+              )}
+
+              <ActionMessage actionData={actionData} className="" />
+
+              <div className="flex flex-col-reverse sm:flex-row gap-3">
+                <Button type="button" variant="secondary" onClick={() => setIsFormOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" loading={isUploading} loadingText="Uploading...">
+                  Add Photo
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isFormOpen && <ActionMessage actionData={actionData} />}
+
+      {filteredPhotos.length === 0 ? (
+        <EmptyState
+          icon="📷"
+          title="No photos here"
+          description={
+            currentCategory === 'ALL' && currentGalleryYear === 'ALL'
+              ? 'Add the first photo to start the gallery.'
+              : 'Try a different year or category.'
+          }
+        />
+      ) : (
+        // 2-up on phones: a single full-width square per row made the gallery
+        // extremely long to scroll.
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {filteredPhotos.map((photo: any) => (
+            <PhotoCard key={photo.id} photo={photo} user={user} setSelectedPhoto={setSelectedPhoto} />
+          ))}
         </div>
+      )}
 
-        {/* Pagination */}
-        <Pagination
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          totalItems={pagination.totalPhotos}
-          itemsPerPage={pagination.pageSize}
-          basePath="/gallery"
-          searchParams={new URLSearchParams(currentCategory !== 'ALL' ? { category: currentCategory } : {})}
-          className="mt-8"
-        />
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.totalPhotos}
+        itemsPerPage={pagination.pageSize}
+        basePath="/gallery"
+        searchParams={
+          new URLSearchParams({
+            ...(currentCategory !== 'ALL' ? { category: currentCategory } : {}),
+            ...(currentGalleryYear !== 'ALL' ? { galleryYear: currentGalleryYear } : {}),
+          })
+        }
+        className="mt-8"
+      />
 
-        {/* Photo Modal */}
-        <PhotoModal
-          selectedPhoto={selectedPhoto}
-          photos={filteredPhotos}
-          onClose={() => setSelectedPhoto(null)}
-          onSelectPhoto={setSelectedPhoto}
-        />
-      </main>
-    </div>
+      <PhotoModal
+        selectedPhoto={selectedPhoto}
+        photos={filteredPhotos}
+        onClose={() => setSelectedPhoto(null)}
+        onSelectPhoto={setSelectedPhoto}
+      />
+    </PageLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { Card, CardContent } from '../ui';
+import { SWAN_LAKE } from '../../lib/course';
 
 interface WeatherCardProps {
   weather: {
@@ -12,73 +12,63 @@ interface WeatherCardProps {
   error?: string;
 }
 
+const WEATHER_EMOJI: Record<string, string> = {
+  clear: '☀️',
+  clouds: '☁️',
+  rain: '🌧️',
+  drizzle: '🌦️',
+  thunderstorm: '⛈️',
+  snow: '🌨️',
+  mist: '🌫️',
+  fog: '🌫️',
+};
+
+/**
+ * Conditions at the course.
+ *
+ * Renders as a compact horizontal strip rather than a tall gradient tile: on a
+ * phone this sits directly under the greeting, where a full-height card pushed
+ * the actual dashboard content below the fold.
+ *
+ * Returns null when weather is unavailable -- getWeatherForPlymouth() yields
+ * null without an API key, and an empty "Loading weather..." card that never
+ * resolves is worse than no card.
+ */
 export function WeatherCard({ weather, error }: WeatherCardProps) {
-  const getWeatherEmoji = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case 'clear':
-        return '☀️';
-      case 'clouds':
-        return '☁️';
-      case 'rain':
-        return '🌧️';
-      case 'drizzle':
-        return '🌦️';
-      case 'thunderstorm':
-        return '⛈️';
-      case 'snow':
-        return '🌨️';
-      case 'mist':
-      case 'fog':
-        return '🌫️';
-      default:
-        return '🌤️';
-    }
-  };
+  if (!weather && !error) return null;
+
+  const emoji = weather ? WEATHER_EMOJI[weather.condition.toLowerCase()] ?? '🌤️' : '🌤️';
 
   return (
-    <a 
-      href="https://swanlakeresort.com" 
-      target="_blank" 
+    <a
+      href={SWAN_LAKE.website}
+      target="_blank"
       rel="noopener noreferrer"
-      className="block"
+      className="block rounded-card border border-sky-200 bg-sky-50 px-4 py-3 transition-shadow hover:shadow-card-hover"
     >
-      <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200 hover:shadow-lg transition-shadow cursor-pointer">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-cyan-600 mb-1 hover:underline">
-                Swan Lake Resort
-              </h3>
-              <p className="text-xs text-cyan-500 mb-2">Plymouth, IN</p>
-            {error ? (
-              <div className="text-sm text-red-600">
-                Unable to load weather
-              </div>
-            ) : weather ? (
-              <div>
-                <div className="text-3xl font-bold text-cyan-900 mb-1">
-                  {Math.round(weather.temperature)}°F
-                </div>
-                <p className="text-xs text-cyan-700 capitalize">
-                  {weather.description}
-                </p>
-                <div className="mt-2 text-xs text-cyan-600 space-y-1">
-                  <div>Humidity: {weather.humidity}%</div>
-                  <div>Wind: {Math.round(weather.windSpeed)} mph</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-gray-500">
-                Loading weather...
-              </div>
-            )}
-          </div>
-          <div className="text-cyan-400 text-3xl">
-            {weather ? getWeatherEmoji(weather.condition) : '🌤️'}
+      {error || !weather ? (
+        <p className="text-sm text-gray-600">Weather unavailable</p>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className="text-3xl leading-none shrink-0" aria-hidden="true">
+            {emoji}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-gray-900 tabular-nums">
+                {Math.round(weather.temperature)}°F
+              </span>
+              <span className="text-sm text-gray-600 capitalize truncate">
+                {weather.description}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {SWAN_LAKE.city}, {SWAN_LAKE.state} &middot; {weather.humidity}% humidity &middot;{' '}
+              {Math.round(weather.windSpeed)} mph wind
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
     </a>
   );
 }

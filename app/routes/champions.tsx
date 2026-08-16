@@ -1,9 +1,17 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
-import { Pencil, Trash2 } from 'lucide-react';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button, Spinner, Image } from '../components/ui';
+import {
+  PageLayout,
+  PageHeader,
+  Card,
+  CardContent,
+  Button,
+  Image,
+  Badge,
+  ConfirmButton,
+  ActionMessage,
+  EmptyState,
+} from '../components/ui';
 import { prisma } from '../lib/db';
 import { cloudflareImages } from '../lib/cloudflare';
 import type { Route } from './+types/champions';
@@ -87,194 +95,127 @@ export async function action({ request }: Route.ActionArgs) {
   return { error: "Invalid action" };
 }
 
+/** Champion Q&A prompts, paired with their model fields. */
+const QA_FIELDS = [
+  { key: 'motivation', prompt: 'What was your motivation?' },
+  { key: 'meaning', prompt: 'What does becoming a champion mean to you?' },
+  { key: 'lifeChange', prompt: 'How has your life changed since winning?' },
+  { key: 'favoriteQuote', prompt: 'Favourite quote' },
+] as const;
+
 export default function Champions({ loaderData, actionData }: Route.ComponentProps) {
   const { user, champions = [] } = loaderData;
-  const [deletingChampionId, setDeletingChampionId] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Tournament Champions
-              </h1>
-              <p className="text-gray-600">
-                Past winners of the annual golf tournament
-              </p>
-            </div>
-            
-            {/* Add Champion Button (Admin Only) */}
-            {user.isAdmin && (
-              <Link to="/champions/new">
-                <Button>
-                  Add Champion
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
+    <PageLayout user={user}>
+      <PageHeader
+        title="Champions"
+        subtitle={
+          champions.length
+            ? `${champions.length} winner${champions.length === 1 ? '' : 's'} of the annual tournament`
+            : 'Past winners of the annual tournament'
+        }
+        actions={
+          user.isAdmin ? (
+            <Link to="/champions/new">
+              <Button>Add Champion</Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
-        {/* Champions List */}
-        <div className="space-y-6">
-          {champions.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-gray-500">
-                  No champions recorded yet. Add the first champion to get started!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            champions.map((champion) => (
-              <Card key={champion.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex flex-col sm:flex-row items-start gap-6">
-                    {/* Champion Photo */}
-                    <div className="flex-shrink-0 w-full sm:w-auto flex justify-center sm:justify-start">
+      <ActionMessage actionData={actionData} />
+
+      {champions.length === 0 ? (
+        <EmptyState
+          icon="🏆"
+          title="No champions recorded yet"
+          description="Add the first champion to start the archive."
+          action={
+            user.isAdmin ? (
+              <Link to="/champions/new">
+                <Button size="sm">Add Champion</Button>
+              </Link>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="space-y-4">
+          {champions.map((champion) => {
+            const name = champion.displayName || champion.golfer.name;
+            const answered = QA_FIELDS.filter(
+              (field) => (champion as any)[field.key]
+            );
+
+            return (
+              <Card key={champion.id}>
+                <CardContent className="py-5">
+                  {/* Stacks on phones: a 192px fixed photo beside long-form Q&A
+                      prose squeezed the text column to ~250px at 390px. */}
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                    <div className="shrink-0 mx-auto sm:mx-0">
                       {champion.photoUrl ? (
                         <Image
                           src={champion.photoUrl}
-                          alt={`${champion.displayName || champion.golfer.name} - ${champion.year} Champion`}
+                          alt=""
                           fallbackIcon="image"
-                          className="w-48 h-48 object-cover rounded-lg border border-gray-300"
+                          className="h-40 w-40 rounded-card border border-gray-200 object-cover"
                         />
                       ) : (
-                        <div className="w-48 h-48 bg-gray-200 rounded-lg border border-gray-300 flex items-center justify-center">
-                          <span className="text-gray-400 text-xs text-center">No Photo</span>
+                        <div className="flex h-40 w-40 items-center justify-center rounded-card border border-gray-200 bg-gray-100">
+                          <span className="text-4xl" aria-hidden="true">🏌️</span>
                         </div>
                       )}
                     </div>
-                    
-                    {/* Champion Info */}
-                    <div className="flex-grow w-full sm:w-auto">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-2xl font-bold text-gray-900">
-                            {champion.year} Champion
-                          </h3>
-                          <h4 className="text-xl font-semibold text-green-600 mt-1">
-                            {champion.displayName || champion.golfer.name}
-                          </h4>
-                          {champion.golfer.email && (
-                            <p className="text-gray-600 mt-1">
-                              {champion.golfer.email}
-                            </p>
-                          )}
 
-                          {/* Q&A Section */}
-                          {(champion.motivation || champion.meaning || champion.lifeChange || champion.favoriteQuote) && (
-                            <div className="mt-6 space-y-4 border-t pt-4">
-                              <h5 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-                                Champion Q&A
-                              </h5>
-                              
-                              {champion.motivation && (
-                                <div>
-                                  <h6 className="text-sm font-medium text-gray-700 mb-1">
-                                    What was your motivation?
-                                  </h6>
-                                  <p className="text-sm text-gray-600 leading-relaxed">
-                                    {champion.motivation}
-                                  </p>
-                                </div>
-                              )}
-
-                              {champion.meaning && (
-                                <div>
-                                  <h6 className="text-sm font-medium text-gray-700 mb-1">
-                                    What does becoming a champion mean to you?
-                                  </h6>
-                                  <p className="text-sm text-gray-600 leading-relaxed">
-                                    {champion.meaning}
-                                  </p>
-                                </div>
-                              )}
-
-                              {champion.lifeChange && (
-                                <div>
-                                  <h6 className="text-sm font-medium text-gray-700 mb-1">
-                                    How has your life changed since winning?
-                                  </h6>
-                                  <p className="text-sm text-gray-600 leading-relaxed">
-                                    {champion.lifeChange}
-                                  </p>
-                                </div>
-                              )}
-
-                              {champion.favoriteQuote && (
-                                <div>
-                                  <h6 className="text-sm font-medium text-gray-700 mb-1">
-                                    What is your favorite quote?
-                                  </h6>
-                                  <blockquote className="text-sm text-gray-600 italic border-l-4 border-green-500 pl-3">
-                                    "{champion.favoriteQuote}"
-                                  </blockquote>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Edit & Delete Buttons (Admin Only) */}
-                        {user.isAdmin && (
-                          <div className="flex gap-2">
-                            {/* Edit Button */}
-                            <Link to={`/champions/${champion.id}/edit`}>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                              >
-                                <Pencil size={16} />
-                              </Button>
-                            </Link>
-                            
-                            {/* Delete Button */}
-                            <form 
-                              method="post" 
-                              className="inline"
-                              onSubmit={(e) => {
-                                if (!confirm(`Are you sure you want to delete the ${champion.year} champion record?`)) {
-                                  e.preventDefault();
-                                  return false;
-                                }
-                                setDeletingChampionId(champion.id);
-                                return true;
-                              }}
-                            >
-                            <input type="hidden" name="_action" value="delete-champion" />
-                            <input type="hidden" name="championId" value={champion.id} />
-                            <Button
-                              type="submit"
-                              variant="danger"
-                              size="sm"
-                              disabled={deletingChampionId === champion.id}
-                            >
-                              {deletingChampionId === champion.id ? (
-                                <div className="flex items-center gap-1">
-                                  <Spinner size="sm" />
-                                  Deleting...
-                                </div>
-                              ) : (
-                                <Trash2 size={16} />
-                              )}
-                            </Button>
-                          </form>
-                          </div>
-                        )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge tone="warning">{champion.year}</Badge>
+                        <h2 className="text-xl font-bold text-gray-900 truncate">{name}</h2>
                       </div>
+
+                      {answered.length > 0 && (
+                        <dl className="mt-3 space-y-3">
+                          {answered.map((field) => (
+                            <div key={field.key}>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                {field.prompt}
+                              </dt>
+                              <dd className="mt-0.5 text-sm text-gray-700 whitespace-pre-line">
+                                {(champion as any)[field.key]}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+
+                      {user.isAdmin && (
+                        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+                          <Link to={`/champions/${champion.id}/edit`}>
+                            <Button variant="secondary" size="sm">
+                              Edit
+                            </Button>
+                          </Link>
+                          <ConfirmButton
+                            fields={{ _action: 'delete-champion', championId: champion.id }}
+                            confirmTitle={`Delete the ${champion.year} champion?`}
+                            confirmMessage="The record and its photo will be removed."
+                            aria-label={`Delete ${champion.year} champion`}
+                            size="sm"
+                            variant="danger"
+                          >
+                            Delete
+                          </ConfirmButton>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
+            );
+          })}
         </div>
-      </main>
-    </div>
+      )}
+    </PageLayout>
   );
 }

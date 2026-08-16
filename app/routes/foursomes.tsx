@@ -1,11 +1,26 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { requireAuth } from '../lib/session';
-import { Navigation } from '../components/Navigation';
-import { Card, CardContent, Button } from '../components/ui';
+import {
+  PageLayout,
+  PageHeader,
+  Button,
+  YearSelect,
+  SortChips,
+  ActionMessage,
+  EmptyState,
+  type SortOption,
+} from '../components/ui';
 import { FoursomeCard } from '../components/cards';
 import { prisma } from '../lib/db';
+import { appendYear, resolveYear } from '../lib/season';
+import { getAvailableYears } from '../lib/season.server';
+import { ROUND_LABELS } from '../lib/course';
 import type { Route } from './+types/foursomes';
+
+const SORT_OPTIONS: readonly SortOption[] = [
+  { value: 'teeTime', label: 'Tee time' },
+  { value: 'score', label: 'Score' },
+];
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -23,16 +38,16 @@ export async function loader({ request }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const sort = url.searchParams.get('sort') || 'teeTime';
     const order = url.searchParams.get('order') || 'asc';
-    const year = url.searchParams.get('year') || '2025';
-    
+
     // Define valid sort options
     const validSorts = ['teeTime', 'score', 'createdAt'];
     const validOrders = ['asc', 'desc'];
-    
+
     const sortBy = validSorts.includes(sort) ? sort : 'teeTime';
     const sortOrder = validOrders.includes(order) ? order : 'asc';
-    const selectedYear = parseInt(year);
-    
+    const availableYears = await getAvailableYears();
+    const selectedYear = resolveYear(url.searchParams, availableYears);
+
     const foursomes = await prisma.foursome.findMany({
       where: {
         year: selectedYear
@@ -46,7 +61,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       orderBy: { [sortBy]: sortOrder }
     });
     
-    return { user, foursomes, currentSort: sortBy, currentOrder: sortOrder, selectedYear };
+    return { user, foursomes, currentSort: sortBy, currentOrder: sortOrder, selectedYear, availableYears };
   } catch (response) {
     throw response;
   }
@@ -100,157 +115,116 @@ const roundLabels = {
 
 
 export default function Foursomes({ loaderData, actionData }: Route.ComponentProps) {
-  const { user, foursomes, currentSort, currentOrder, selectedYear } = loaderData;
-  const [deletingFoursomeId, setDeletingFoursomeId] = useState<string | null>(null);
-  
-  const getSortUrl = (sortBy: string) => {
-    const newOrder = currentSort === sortBy && currentOrder === 'asc' ? 'desc' : 'asc';
-    const params = new URLSearchParams();
-    params.set('sort', sortBy);
-    params.set('order', newOrder);
-    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
-    return `/foursomes?${params.toString()}`;
-  };
-  
-  const getSortIcon = (sortBy: string) => {
-    if (currentSort !== sortBy) {
-      return '↕️';
-    }
-    return currentOrder === 'asc' ? '↑' : '↓';
-  };
-  
-  // Generate URL with current search parameters
+  const { user, foursomes, currentSort, currentOrder, selectedYear, availableYears } = loaderData;
+
   const getUrlWithCurrentParams = (basePath: string) => {
     const params = new URLSearchParams();
     if (currentSort !== 'teeTime') params.set('sort', currentSort);
     if (currentOrder !== 'asc') params.set('order', currentOrder);
-    if (selectedYear !== 2025) params.set('year', selectedYear.toString());
+    appendYear(params, selectedYear);
     const queryString = params.toString();
     return queryString ? `${basePath}?${queryString}` : basePath;
   };
 
   const sortedFoursomes = [...foursomes].sort((a, b) => {
-    if (currentSort === 'teeTime') {
-      const aTime = new Date(a.teeTime).getTime();
-      const bTime = new Date(b.teeTime).getTime();
-      return currentOrder === 'asc' ? aTime - bTime : bTime - aTime;
-    } else if (currentSort === 'score') {
-      const aScore = a.score;
-      const bScore = b.score;
-      return currentOrder === 'asc' ? aScore - bScore : bScore - aScore;
+    if (currentSort === 'score') {
+      return currentOrder === 'asc' ? a.score - b.score : b.score - a.score;
     }
-    return 0;
+    const aTime = new Date(a.teeTime).getTime();
+    const bTime = new Date(b.teeTime).getTime();
+    return currentOrder === 'asc' ? aTime - bTime : bTime - aTime;
   });
 
+  // Group by round so the page reads as "the schedule" rather than a flat list.
+  const byRound = new Map<string, typeof sortedFoursomes>();
+  for (const foursome of sortedFoursomes) {
+    const list = byRound.get(foursome.round) ?? [];
+    list.push(foursome);
+    byRound.set(foursome.round, list);
+  }
+  const roundOrder = Object.keys(ROUND_LABELS).filter((round) => byRound.has(round));
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation user={user} />
-      
-      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Foursomes
-              </h1>
-              <p className="text-gray-600">
-                Manage foursomes for each round
-              </p>
-            </div>
-            
-            {/* Add Foursome Button (Admin Only) */}
-            {user.isAdmin && (
-              <Link to={getUrlWithCurrentParams('/foursomes/new')}>
-                <Button>
-                  Add Foursome
-                </Button>
-              </Link>
-            )}
-          </div>
-          
-          {/* Year and Sort Controls */}
-          <div className="mt-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            {/* Year Selector */}
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-gray-800 font-medium">Year:</span>
-              <select 
-                value={selectedYear}
-                onChange={(e) => {
-                  const newYear = e.target.value;
-                  const params = new URLSearchParams();
-                  params.set('year', newYear);
-                  if (currentSort !== 'teeTime') params.set('sort', currentSort);
-                  if (currentOrder !== 'asc') params.set('order', currentOrder);
-                  window.location.href = `/foursomes?${params.toString()}`;
-                }}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
-            
-            {/* Sort Controls */}
+    <PageLayout user={user}>
+      <PageHeader
+        title="Foursomes"
+        subtitle={`Tee times and groups for the ${selectedYear} trip`}
+        actions={
+          user.isAdmin ? (
+            <Link to={getUrlWithCurrentParams('/foursomes/new')}>
+              <Button>Add Foursome</Button>
+            </Link>
+          ) : undefined
+        }
+        controls={
+          <>
+            <YearSelect years={availableYears} value={selectedYear} />
             {foursomes.length > 0 && (
-              <div className="flex gap-2 items-center">
-                <span className="text-sm text-gray-800 font-medium">Sort by:</span>
-                <Link 
-                  to={getSortUrl('teeTime')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Tee Time {getSortIcon('teeTime')}
-                </Link>
-                <Link 
-                  to={getSortUrl('score')}
-                  className="text-sm px-3 py-1 rounded-md border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 flex items-center gap-1"
-                >
-                  Score {getSortIcon('score')}
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-
-
-        {/* Action Messages */}
-        {actionData?.error && (
-          <div className="mb-6 text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-            {actionData.error}
-          </div>
-        )}
-        
-        {actionData?.success && (
-          <div className="mb-6 text-green-600 text-sm bg-green-50 border border-green-200 rounded-md p-3">
-            {actionData.message}
-          </div>
-        )}
-
-        {/* Foursomes List */}
-        <div className="grid gap-4">
-          {sortedFoursomes.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-gray-500">
-                  No foursomes found. Create your first foursome to get started!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            sortedFoursomes.map((foursome: any) => (
-              <FoursomeCard
-                key={foursome.id}
-                foursome={foursome}
-                user={user}
-                deletingFoursomeId={deletingFoursomeId}
-                setDeletingFoursomeId={setDeletingFoursomeId}
-                getUrlWithCurrentParams={getUrlWithCurrentParams}
-                roundLabels={roundLabels}
+              <SortChips
+                options={SORT_OPTIONS}
+                currentSort={currentSort}
+                currentOrder={currentOrder}
+                defaultSort="teeTime"
               />
-            ))
-          )}
+            )}
+          </>
+        }
+      />
+
+      <ActionMessage actionData={actionData} />
+
+      {sortedFoursomes.length === 0 ? (
+        <EmptyState
+          icon="⛳"
+          title={`No foursomes for ${selectedYear}`}
+          description={
+            user.isAdmin
+              ? 'Add a foursome for each round. Golfers must be on this season’s roster before they can be picked.'
+              : 'Groups for this season have not been posted yet.'
+          }
+          action={
+            user.isAdmin ? (
+              <Link to={getUrlWithCurrentParams('/foursomes/new')}>
+                <Button size="sm">Add Foursome</Button>
+              </Link>
+            ) : undefined
+          }
+        />
+      ) : currentSort === 'teeTime' ? (
+        <div className="space-y-6">
+          {roundOrder.map((round) => (
+            <section key={round} aria-labelledby={`round-${round}`}>
+              <h2
+                id={`round-${round}`}
+                className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500"
+              >
+                {ROUND_LABELS[round as keyof typeof ROUND_LABELS]}
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {byRound.get(round)!.map((foursome) => (
+                  <FoursomeCard
+                    key={foursome.id}
+                    foursome={foursome as any}
+                    user={user}
+                    getUrlWithCurrentParams={getUrlWithCurrentParams}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
-      </main>
-    </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {sortedFoursomes.map((foursome) => (
+            <FoursomeCard
+              key={foursome.id}
+              foursome={foursome as any}
+              user={user}
+              getUrlWithCurrentParams={getUrlWithCurrentParams}
+            />
+          ))}
+        </div>
+      )}
+    </PageLayout>
   );
 }

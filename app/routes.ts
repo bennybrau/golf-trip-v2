@@ -24,4 +24,6 @@ export default [
   route("champions", "routes/champions.tsx"),
   route("champions/new", "routes/champions.new.tsx"),
   route("champions/:id/edit", "routes/champions.$id.edit.tsx"),
+  route("course", "routes/course.tsx"),
+  route("admin/season", "routes/admin.season.tsx"),
 ] satisfies RouteConfig;

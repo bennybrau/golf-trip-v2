@@ -82,7 +82,7 @@ model Foursome {
   golfer4Id String?
   teeTime   DateTime
   course    Course
-  year      Int      @default(2024)
+  year      Int
   golfer1   Golfer?  @relation("Player1", fields: [golfer1Id], references: [id])
   golfer2   Golfer?  @relation("Player2", fields: [golfer2Id], references: [id])
   golfer3   Golfer?  @relation("Player3", fields: [golfer3Id], references: [id])
@@ -95,10 +95,13 @@ model Photo {
   url          String
   caption      String?
   category     String?
+  year         Int?
   createdBy    String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([year])
 }
 
 model Champion {

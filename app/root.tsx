@@ -66,7 +66,7 @@ export default function App() {
       {isLoading && (
         <div className="fixed top-0 left-0 right-0 z-50">
           <div className="h-1 bg-gray-200">
-            <div className="h-full bg-green-600 animate-pulse transition-all duration-300 ease-in-out" 
+            <div className="h-full bg-brand-600 animate-pulse transition-all duration-300 ease-in-out" 
                  style={{ width: '100%' }} />
           </div>
         </div>

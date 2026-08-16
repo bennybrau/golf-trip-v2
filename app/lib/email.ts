@@ -1,6 +1,21 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+/**
+ * Constructed lazily. The Resend constructor THROWS when the API key is missing,
+ * so building it at module scope took down every route that transitively imports
+ * this file -- including the whole dev server, since forgot-password.tsx imports
+ * it. The guard in sendEmail() below could never run, because the throw happened
+ * at import time. Deferring construction lets the guard do its job and keeps the
+ * app runnable without a Resend account.
+ */
+let resendClient: Resend | null = null;
+
+function getResend(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 export interface EmailOptions {
   to: string;
@@ -16,7 +31,7 @@ export async function sendEmail({ to, subject, html, from }: EmailOptions) {
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: from || process.env.EMAIL_FROM || 'Golf Trip <noreply@yourdomain.com>',
       to,
       subject,
