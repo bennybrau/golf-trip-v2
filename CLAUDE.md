@@ -4,73 +4,132 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common Commands
 
-### Development
-- `npm run dev` - Start development server (http://localhost:5173)
-- `npm run build` - Build for production (includes Prisma generation)
-- `npm run start` - Start production server
-- `npm run typecheck` - Run TypeScript type checking (includes React Router typegen)
+```bash
+npm run dev          # Dev server at http://localhost:5173
+npm run build        # prisma generate + react-router build
+npm run typecheck    # react-router typegen + tsc — the ONLY automated check in this repo
+npm run start        # Serve the production build
+```
 
-### Database Operations
-- `npm run db:migrate` - Create and apply new migrations
-- `npm run db:push` - Apply schema changes to database
-- `npm run db:studio` - Open Prisma database browser
-- `npm run db:reset` - Reset database with fresh migrations
-- `npm run db:deploy` - Deploy migrations to production
-- `npm run db:sync-to-remote` - Sync local data to remote database
-- `npm run db:sync-from-remote` - Sync remote data to local database
+Database (Prisma / PostgreSQL):
 
-### Other Scripts
-- `npm run update-sw` - Update service worker cache
-- `npm install` - Automatically runs `prisma generate` via postinstall
+```bash
+npm run db:migrate   # Create + apply a migration (dev)
+npm run db:push      # Push schema without a migration
+npm run db:studio    # Prisma browser
+npm run db:reset     # Drop + re-migrate
+npm run db:deploy    # Apply migrations in production
+npm run db:sync-from-remote   # Copy remote data into local DB (needs REMOTE_DATABASE_URL)
+npm run db:sync-to-remote     # Copy local data to remote (destructive to remote)
+```
 
-## Architecture Overview
+There is **no test suite, linter, or formatter**. `npm run typecheck` is the gate before committing —
+run it after touching routes, since it regenerates the `./+types/*` route types.
 
-This is a full-stack golf management application built with React Router v7 and PostgreSQL.
+`npm run update-sw` stamps `public/sw.js`'s `CACHE_NAME` with the current git short hash. Run it (and
+commit the change) when shipping changes that must bust the PWA cache — it reads `git rev-parse HEAD`,
+so run it *after* committing the code change.
 
-### Core Stack
-- **Frontend**: React 19 with React Router v7 (SSR enabled)
-- **Backend**: React Router server functions
-- **Database**: PostgreSQL with Prisma ORM
-- **Styling**: Tailwind CSS v4
-- **Auth**: Session-based with bcryptjs password hashing
+## Architecture
 
-### Key Application Models
-The database schema centers around golf trip management:
+React Router v7 (SSR) + Prisma/PostgreSQL, deployed on Vercel. Every page is a server-rendered route
+module; there is no separate API layer — loaders read Prisma directly and actions handle form POSTs.
 
-- **User**: Account management with optional golfer association
-- **Golfer**: Golf participants with yearly status tracking
-- **Foursome**: Golf groups with tee times, courses, and scores
-- **Champion**: Yearly champions with photos and Q&A data
-- **Photo**: Gallery management with Cloudflare integration
-- **Session**: Authentication tokens with 30-day expiration
+### Route module conventions
 
-### Project Structure
-- `app/lib/` - Core utilities (auth, db, session, validation, weather, email)
-- `app/components/` - Reusable UI components organized by purpose
-  - `ui/` - Base UI components (Button, Card, Input, etc.)
-  - `cards/` - Feature-specific card components
-  - `dashboard/` - Dashboard-specific components
-- `app/routes/` - React Router v7 file-based routing
-- `prisma/` - Database schema and migrations
-- `scripts/` - Utility scripts for database sync and service worker updates
+Routes are **explicitly registered** in `app/routes.ts` — adding a file under `app/routes/` does
+nothing until it's listed there. Filenames use the flat dotted convention (`champions.$id.edit.tsx`)
+purely as a naming style.
 
-### Authentication Flow
-- Session-based authentication using httpOnly cookies
-- Automatic session cleanup for expired tokens
-- Password reset functionality with time-limited tokens
-- Admin role support for privileged operations
+Each route follows the same shape:
 
-### Key Features
-- Multi-year golf trip data with yearly golfer status
-- Photo gallery with Cloudflare storage
-- Weather integration for golf conditions
-- Email notifications via Resend
-- PWA support with service worker
-- Responsive design optimized for mobile
+- `loader` starts with `const user = await requireAuth(request)` (`app/lib/session.ts`), which throws
+  a redirect to `/login`. Several routes wrap this in `try { ... } catch (response) { throw response }`.
+- Admin-only behavior is enforced **per route**, not by middleware: `if (!user.isAdmin) throw new
+  Response("Unauthorized", { status: 403 })` in both the loader and the action, plus `{user.isAdmin && ...}`
+  gating in the component. Adding an admin feature means all three.
+- `action` multiplexes on a hidden `_action` form field (`'add-photo'`, `'toggle-golfer-status'`,
+  `'update-golfer-cabin'`, …) and returns `{ error }` / `{ success, message }` objects rather than throwing.
+- Types come from `import type { Route } from './+types/<route-name>'` (generated by typegen).
 
-### Development Notes
-- Database migrations are required for schema changes
-- Prisma client regeneration happens automatically on build/install
-- TypeScript strict mode enabled
-- The app uses server-side rendering by default
-- Environment variables managed through DATABASE_URL
+### Year-scoped data — the core domain concept
+
+The app holds multiple years of trip data. Nearly every page is filtered by a `?year=` search param
+that defaults to the string `'2025'`, **hardcoded in each route** (`home`, `scores`, `foursomes`,
+`foursomes.new`, `golfers.$id.edit`) and again as `year: 2025` when `golfers.new` creates a golfer's
+first `GolferStatus`. Rolling the trip to a new year means updating all of those. By convention links
+omit the param when the year equals the default (`if (selectedYear !== 2025) params.set('year', ...)`),
+so year selection must be threaded manually through every generated URL.
+
+`GolferStatus` is the per-year join between a golfer and a trip: it carries `isActive` and `cabin` and
+is uniquely keyed `[golferId, year]`. A golfer with **no** `GolferStatus` row for the selected year is
+invisible on that year's pages; inactive golfers are visible only to admins.
+
+### Scores are computed, not stored
+
+`Foursome` denormalizes players into four nullable columns (`golfer1Id`…`golfer4Id`) with four named
+Prisma relations (`foursomesAsPlayer1`…`Player4`). Consequences that shape most query code:
+
+- Getting a golfer's rounds means including all four relations (each with `where: { year }`) and
+  spreading them into one array.
+- A golfer's total is `reduce`d over that array in JS. Because the total is not a column, sorting by
+  score or rounds happens **after** the Prisma query, in memory (see `app/routes/scores.tsx`);
+  only `name` can be sorted via `orderBy`.
+- Adding a fifth player, or querying "foursomes containing golfer X", requires touching all four
+  columns/relations.
+
+### Time handling
+
+Tee times are stored as UTC and always presented in `America/New_York` via `app/lib/timeUtils.ts`
+(`parseDateTimeLocal` for `datetime-local` input → UTC, `formatDateTimeLocal` / `formatTeeTimeDisplay`
+for output). Never format a `teeTime` with raw `date-fns` or `toLocaleString` — server and client
+timezones differ and will disagree across SSR hydration.
+
+### External services
+
+All are read from `process.env` at runtime and degrade rather than crash, except Cloudflare:
+
+- **Cloudflare Images** (`app/lib/cloudflare.ts`) — `cloudflareImages` is a module-level singleton
+  whose constructor **throws at import time** if `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_IMAGES_API_TOKEN`
+  are missing, so importing it takes the route down without those vars. Photo URLs are built from
+  `CLOUDFLARE_IMG_URL_PREFIX`. `Photo` and `Champion` rows store `cloudflareId`; deleting a record
+  should also call `deleteImage` to avoid orphaning the asset.
+- **OpenWeatherMap** (`app/lib/weather.ts`) — hardcoded to Plymouth, IN coordinates; returns `null`
+  without `OPENWEATHERMAP_API_KEY`, and `WeatherCard` must handle null.
+- **Resend** (`app/lib/email.ts`) — no-ops with a warning without `RESEND_API_KEY`; sender from `EMAIL_FROM`.
+
+Auth is hand-rolled: `crypto.randomUUID()` session tokens in a `session=` httpOnly cookie (30 days),
+bcrypt password hashes, and 1-hour `PasswordResetToken`s. `getSessionUser` deletes expired sessions on read.
+
+### Imports and components
+
+Imports are **relative** (`../lib/db`, `../components/ui`). The `~/*` → `app/*` alias exists in
+`tsconfig.json` but is unused — don't introduce it piecemeal. `app/components/ui`, `cards`, and
+`dashboard` each expose a barrel `index.ts`; import from the directory, and register new components there.
+
+Prisma is instantiated once in `app/lib/db.ts` with a `globalThis` cache to survive dev HMR — always
+import `{ prisma }` from there rather than constructing a `PrismaClient`.
+
+## Environment variables
+
+`DATABASE_URL` (see `.env.example`), plus `REMOTE_DATABASE_URL` (sync scripts), `CLOUDFLARE_ACCOUNT_ID`,
+`CLOUDFLARE_IMAGES_API_TOKEN`, `CLOUDFLARE_IMG_URL_PREFIX`, `OPENWEATHERMAP_API_KEY`, `RESEND_API_KEY`,
+`EMAIL_FROM`.
+
+## Deployment (Vercel)
+
+`vercel.json` sets `"framework": "react-router"` and builds via `npm run build`.
+
+The `vercel@claude-plugins-official` Claude Code plugin is installed at **user scope**, not committed
+to this repo — it may be absent for other contributors, so never assume its skills are available.
+Its useful skills here are `deployments-cicd`, `vercel-cli`, `verification`, `env-vars`,
+`cdn-caching`, and `vercel-functions`.
+
+**Ignore its Next.js skills** (`nextjs`, `next-cache-components`, `next-upgrade`, `next-forge`,
+`turbopack`, `routing-middleware`). This is a React Router v7 app: routing lives in `app/routes.ts`,
+not an `app/` file-system router, and there is no `next.config.js`. Guidance from those skills does
+not translate.
+
+`env-vars` is worth reaching for when a route 500s in production but works locally — missing Cloudflare
+vars make `app/lib/cloudflare.ts` throw at import time, which presents as a dead route rather than a
+handled error (see *External services*).
