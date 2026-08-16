@@ -1,7 +1,7 @@
 /**
  * Utility functions for handling timezone-aware date operations
  * 
- * Golf trips happen in Eastern Time (Myrtle Beach, SC area),
+ * Golf trips happen in Eastern Time (Plymouth, IN area),
  * so all tee times are consistently handled in America/New_York timezone.
  */
 
